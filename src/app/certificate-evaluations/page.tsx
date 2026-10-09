@@ -4,15 +4,17 @@ import React, { useState } from 'react';
 import Navbar from '@/components/Navbar';
 import { 
   createCertificateEvaluation, 
-  getCertificateEvaluation, 
+  getCertificateEvaluation,
+  getCertificateEvaluations,
   deleteCertificateEvaluation,
   updateCertificateEvaluation
 } from '@/services/lms.services';
-import { 
+import {
   CheckCircle, Search, Trash2, PlusCircle, 
-  User, BookOpen, Star, Calendar, Clock, FileText, XCircle, RefreshCw, Edit2
+  User, BookOpen, Star, Calendar, Clock, FileText, XCircle, RefreshCw, Edit2, Eye
 } from 'lucide-react';
 import Dropdown from '@/components/ui/Dropdown';
+import Link from 'next/link';
 
 export default function CertificateEvaluationsPage() {
   const [activeTab, setActiveTab] = useState<'create' | 'manage'>('create');
@@ -51,17 +53,20 @@ export default function CertificateEvaluationsPage() {
     setListLoading(true);
     setListError('');
     try {
-      const res = await getCertificateEvaluation('');
-      const data = res?.message || res?.data || res;
-      if (Array.isArray(data)) {
-        setEvaluations(data);
-      } else if (data && typeof data === 'object') {
-        if (Array.isArray(data.data)) setEvaluations(data.data);
-        else if (data.name) setEvaluations([data]);
-        else setEvaluations([]);
-      } else {
-        setEvaluations([]);
+      const res = await getCertificateEvaluations();
+      
+      let fetchedData = [];
+      if (Array.isArray(res)) {
+        fetchedData = res;
+      } else if (res && Array.isArray(res.data)) {
+        fetchedData = res.data;
+      } else if (res && res.message && Array.isArray(res.message)) {
+        fetchedData = res.message;
+      } else if (res && typeof res === 'object' && res.name) {
+        fetchedData = [res];
       }
+      
+      setEvaluations(fetchedData);
     } catch (err: any) {
       setListError(err?.message || 'Failed to fetch evaluations.');
     } finally {
@@ -102,7 +107,11 @@ export default function CertificateEvaluationsPage() {
     }
   };
 
-  const handleEdit = (evalData: any) => {
+  const handleEdit = async (evalData: any) => {
+    setActiveTab('create');
+    setCreateSuccess('');
+    setCreateError('');
+    // Prefill with list data first
     setFormData({
       name: evalData.name || '',
       member: evalData.member || '',
@@ -116,9 +125,36 @@ export default function CertificateEvaluationsPage() {
       status: evalData.status || 'Pass',
       summary: evalData.summary || ''
     });
-    setCreateSuccess('');
-    setCreateError('');
-    setActiveTab('create');
+
+    // Fetch full evaluation data
+    try {
+      const res = await getCertificateEvaluation(evalData.name);
+      let fullData = null;
+      if (Array.isArray(res)) fullData = res[0];
+      else if (res && Array.isArray(res.data)) fullData = res.data[0];
+      else if (res && res.message && Array.isArray(res.message)) fullData = res.message[0];
+      else if (res && typeof res === 'object' && res.name) fullData = res;
+      else if (res && res.data && typeof res.data === 'object' && res.data.name) fullData = res.data;
+      
+      if (fullData) {
+        const item = fullData;
+        setFormData({
+          name: item.name || '',
+          member: item.member || '',
+          course: item.course || '',
+          batch_name: item.batch_name || '',
+          evaluator: item.evaluator || '',
+          date: item.date || new Date().toISOString().split('T')[0],
+          start_time: item.start_time || '10:00:00',
+          end_time: item.end_time || '11:00:00',
+          rating: item.rating || 4,
+          status: item.status || 'Pass',
+          summary: item.summary || ''
+        });
+      }
+    } catch (err) {
+      console.error('Failed to fetch full evaluation details:', err);
+    }
   };
 
   const handleDelete = async (evalName: string) => {
@@ -357,6 +393,13 @@ export default function CertificateEvaluationsPage() {
                     </div>
                     
                     <div className="pt-4 border-t border-slate-100 flex justify-end gap-2">
+                      <Link
+                        href={`/certificate-evaluations/${evaluation.name}`}
+                        className="flex items-center gap-1.5 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-md text-xs font-bold transition-colors"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        View
+                      </Link>
                       <button
                         onClick={() => handleEdit(evaluation)}
                         className="flex items-center gap-1.5 text-slate-600 bg-slate-50 hover:bg-slate-100 px-3 py-1.5 rounded-md text-xs font-bold transition-colors"

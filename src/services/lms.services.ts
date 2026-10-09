@@ -416,7 +416,7 @@ export const getCertificateEvaluation = async (name: string) => {
 };
 
 export const getCertificateEvaluations = async () => {
-  return apiService.get(`method/${API_METHOD_PREFIX}.get_certificate_evaluations`, {
+  return apiService.get(`method/${API_METHOD_PREFIX}.list_certificate_evaluations`, {
     headers: {
       'Authorization': `token ${API_TOKEN}`
     }

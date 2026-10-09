@@ -99,9 +99,14 @@ export default function BatchesPage() {
                 <input type="text" placeholder="Search batches..." className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 w-full sm:w-64" />
               </div>
               {isInstructor && (
-                <Link href="/batch/create" className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-sm transition-colors shadow-sm whitespace-nowrap">
-                  <Plus className="w-4 h-4" /> Create
-                </Link>
+                <div className="flex items-center gap-2">
+                  <Link href="/enrollments" className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg text-sm transition-colors shadow-sm whitespace-nowrap">
+                    <Users className="w-4 h-4" /> Enrollments
+                  </Link>
+                  <Link href="/batch/create" className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-sm transition-colors shadow-sm whitespace-nowrap">
+                    <Plus className="w-4 h-4" /> Create
+                  </Link>
+                </div>
               )}
             </div>
           </div>
