@@ -27,9 +27,9 @@ const apiRequest = async (config: AxiosRequestConfig) => {
     delete headers.Authorization;
   }
 
-  // Do not attach token headers for login, signup, and master dropdown routes
+  // Do not attach token headers for login, signup, OTP, and master dropdown routes
   const isAuthRoute = typeof config.url === 'string' && 
-    (config.url.includes('lms_login.login') || config.url.includes('lms_login.signup') || config.url.includes('lms_login.forgot_password'));
+    (config.url.includes('lms_login.login') || config.url.includes('lms_login.signup') || config.url.includes('lms_login.forgot_password') || config.url.includes('lms_login.send_') || config.url.includes('lms_login.validate_'));
 
   if (!isAuthRoute && !headers.Authorization && apiKey && apiSecret) {
     headers.Authorization = `token ${apiKey}:${apiSecret}`;

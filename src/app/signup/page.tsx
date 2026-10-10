@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { signup } from "@/services/auth.services";
+import { signup, sendEmailOtp, sendMobileOtp, validateEmailOtp, validateMobileOtp } from "@/services/auth.services";
 import { GraduationCap, Users, Settings, Eye, EyeOff } from "lucide-react";
 
 const ROLES = [
@@ -36,10 +36,136 @@ export default function SignupPage() {
   const [passwordError, setPasswordError] = useState("");
   const [confirmPasswordError, setConfirmPasswordError] = useState("");
 
+  const [mobileNo, setMobileNo] = useState("");
+  const [emailOtp, setEmailOtp] = useState("");
+  const [mobileOtp, setMobileOtp] = useState("");
+  
+  const [emailOtpSent, setEmailOtpSent] = useState(false);
+  const [mobileOtpSent, setMobileOtpSent] = useState(false);
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [mobileVerified, setMobileVerified] = useState(false);
+  
+  const [sendingEmailOtp, setSendingEmailOtp] = useState(false);
+  const [sendingMobileOtp, setSendingMobileOtp] = useState(false);
+  const [verifyingEmailOtp, setVerifyingEmailOtp] = useState(false);
+  const [verifyingMobileOtp, setVerifyingMobileOtp] = useState(false);
+
+  const [emailResendTimer, setEmailResendTimer] = useState(0);
+  const [mobileResendTimer, setMobileResendTimer] = useState(0);
+  
+  const [emailMsg, setEmailMsg] = useState({ text: "", type: "" });
+  const [mobileMsg, setMobileMsg] = useState({ text: "", type: "" });
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (emailResendTimer > 0) {
+      interval = setInterval(() => setEmailResendTimer((prev) => prev - 1), 1000);
+    }
+    return () => clearInterval(interval);
+  }, [emailResendTimer]);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (mobileResendTimer > 0) {
+      interval = setInterval(() => setMobileResendTimer((prev) => prev - 1), 1000);
+    }
+    return () => clearInterval(interval);
+  }, [mobileResendTimer]);
+
+  const handleSendEmailOtp = async () => {
+    if (!email) {
+      setEmailMsg({ text: "Please enter email first", type: "error" });
+      return;
+    }
+    setSendingEmailOtp(true);
+    setEmailMsg({ text: "", type: "" });
+    try {
+      await sendEmailOtp({ email });
+      setEmailOtpSent(true);
+      setEmailResendTimer(60);
+      setEmailMsg({ text: "OTP sent successfully", type: "success" });
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.message || err.response?.data?.error || err.message || "Failed to send email OTP";
+      setEmailMsg({ text: errorMsg, type: "error" });
+    } finally {
+      setSendingEmailOtp(false);
+    }
+  };
+
+  const handleVerifyEmailOtp = async () => {
+    if (!emailOtp) {
+      setEmailMsg({ text: "Please enter email OTP", type: "error" });
+      return;
+    }
+    setVerifyingEmailOtp(true);
+    setEmailMsg({ text: "", type: "" });
+    try {
+      await validateEmailOtp({ email, otp: emailOtp });
+      setEmailVerified(true);
+      setEmailMsg({ text: "OTP verified successfully", type: "success" });
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.message || err.response?.data?.error || err.message || "Invalid email OTP";
+      setEmailMsg({ text: errorMsg, type: "error" });
+    } finally {
+      setVerifyingEmailOtp(false);
+    }
+  };
+
+  const handleSendMobileOtp = async () => {
+    if (!mobileNo) {
+      setMobileMsg({ text: "Please enter mobile number first", type: "error" });
+      return;
+    }
+    setSendingMobileOtp(true);
+    setMobileMsg({ text: "", type: "" });
+    try {
+      await sendMobileOtp({ mobile_no: mobileNo });
+      setMobileOtpSent(true);
+      setMobileResendTimer(60);
+      setMobileMsg({ text: "OTP sent successfully", type: "success" });
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.message || err.response?.data?.error || err.message || "Failed to send mobile OTP";
+      setMobileMsg({ text: errorMsg, type: "error" });
+    } finally {
+      setSendingMobileOtp(false);
+    }
+  };
+
+  const handleVerifyMobileOtp = async () => {
+    if (!mobileOtp) {
+      setMobileMsg({ text: "Please enter mobile OTP", type: "error" });
+      return;
+    }
+    setVerifyingMobileOtp(true);
+    setMobileMsg({ text: "", type: "" });
+    try {
+      await validateMobileOtp({ mobile_no: mobileNo, otp: mobileOtp });
+      setMobileVerified(true);
+      setMobileMsg({ text: "OTP verified successfully", type: "success" });
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.message || err.response?.data?.error || err.message || "Invalid mobile OTP";
+      setMobileMsg({ text: errorMsg, type: "error" });
+    } finally {
+      setVerifyingMobileOtp(false);
+    }
+  };
+
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
+
+    if (!emailVerified) {
+      setError("Please verify your email address before signing up.");
+      setLoading(false);
+      return;
+    }
+
+    if (!mobileVerified) {
+      setError("Please verify your mobile number before signing up.");
+      setLoading(false);
+      return;
+    }
 
     const validatePassword = (pass: string) => {
       if (pass.length < 8) return "Password must be at least 8 characters long";
@@ -72,6 +198,7 @@ export default function SignupPage() {
         first_name: firstName,
         last_name: lastName,
         email,
+        mobile_no: mobileNo,
         password,
         role: [
           { student: role === "student" ? 1 : 0 },
@@ -82,7 +209,8 @@ export default function SignupPage() {
       await signup(payload);
       router.push("/login");
     } catch (err: any) {
-      setError(err.message || "Failed to signup");
+      const errorMsg = err.response?.data?.message || err.response?.data?.error || err.message || "Failed to signup";
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -194,19 +322,132 @@ export default function SignupPage() {
               >
                 Email address
               </label>
-              <div className="mt-1">
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="student@example.com"
-                  className="appearance-none block w-full px-4 py-3 border border-slate-300 rounded-xl shadow-sm placeholder-slate-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-white text-slate-900 transition-all duration-200"
-                />
+              <div className="mt-1 flex gap-2">
+                <div className="relative w-full">
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    required
+                    disabled={emailVerified || emailOtpSent}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="student@example.com"
+                    className="appearance-none block w-full px-4 py-3 border border-slate-300 rounded-xl shadow-sm placeholder-slate-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-white text-slate-900 transition-all duration-200 disabled:bg-slate-100 disabled:text-slate-500"
+                  />
+                  {emailVerified && (
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-green-600 font-bold text-sm bg-green-50 px-2 py-1 rounded-md">
+                      ✓ Verified
+                    </span>
+                  )}
+                </div>
+                {!emailVerified && !emailOtpSent && (
+                  <button type="button" onClick={handleSendEmailOtp} disabled={sendingEmailOtp} className="whitespace-nowrap px-5 py-3 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-xl text-sm font-bold hover:bg-indigo-100 hover:border-indigo-300 focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition-all">
+                    {sendingEmailOtp ? "Sending..." : "Get OTP"}
+                  </button>
+                )}
               </div>
+              {emailMsg.text && (
+                <div className={`mt-1.5 text-xs font-medium ${emailMsg.type === 'error' ? 'text-red-500' : 'text-green-600'}`}>
+                  {emailMsg.text}
+                </div>
+              )}
+              {emailOtpSent && !emailVerified && (
+                <div className="mt-2 flex gap-2">
+                  <input
+                    type="text"
+                    value={emailOtp}
+                    onChange={(e) => setEmailOtp(e.target.value)}
+                    placeholder="Enter Email OTP"
+                    className="appearance-none block w-full px-4 py-3 border border-slate-300 rounded-xl shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-white text-slate-900 transition-all"
+                  />
+                  <button type="button" onClick={handleVerifyEmailOtp} disabled={verifyingEmailOtp} className="whitespace-nowrap px-5 py-3 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition-colors">
+                    {verifyingEmailOtp ? "Verifying..." : "Verify"}
+                  </button>
+                </div>
+              )}
+              {emailOtpSent && !emailVerified && emailResendTimer === 0 && (
+                <div className="mt-2 text-right">
+                  <button type="button" onClick={handleSendEmailOtp} className="text-xs text-indigo-600 hover:text-indigo-800 font-medium">
+                    Resend OTP
+                  </button>
+                </div>
+              )}
+              {emailOtpSent && !emailVerified && emailResendTimer > 0 && (
+                <div className="mt-2 text-right">
+                  <span className="text-xs text-slate-500 font-medium">Resend OTP in {emailResendTimer}s</span>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label
+                htmlFor="mobileNo"
+                className="block text-sm font-medium text-slate-700"
+              >
+                Mobile Number
+              </label>
+              <div className="mt-1 flex gap-2">
+                <div className="relative w-full">
+                  <input
+                    id="mobileNo"
+                    name="mobileNo"
+                    type="text"
+                    maxLength={10}
+                    required
+                    disabled={mobileVerified || mobileOtpSent}
+                    value={mobileNo}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '');
+                      if (val.length <= 10) setMobileNo(val);
+                    }}
+                    placeholder="e.g. 8767601473"
+                    className="appearance-none block w-full px-4 py-3 border border-slate-300 rounded-xl shadow-sm placeholder-slate-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-white text-slate-900 transition-all duration-200 disabled:bg-slate-100 disabled:text-slate-500"
+                  />
+                  {mobileVerified && (
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-green-600 font-bold text-sm bg-green-50 px-2 py-1 rounded-md">
+                      ✓ Verified
+                    </span>
+                  )}
+                </div>
+                {!mobileVerified && !mobileOtpSent && (
+                  <button type="button" onClick={handleSendMobileOtp} disabled={sendingMobileOtp} className="whitespace-nowrap px-5 py-3 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-xl text-sm font-bold hover:bg-indigo-100 hover:border-indigo-300 focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition-all">
+                    {sendingMobileOtp ? "Sending..." : "Get OTP"}
+                  </button>
+                )}
+              </div>
+              {mobileMsg.text && (
+                <div className={`mt-1.5 text-xs font-medium ${mobileMsg.type === 'error' ? 'text-red-500' : 'text-green-600'}`}>
+                  {mobileMsg.text}
+                </div>
+              )}
+              {mobileOtpSent && !mobileVerified && (
+                <div className="mt-2 flex gap-2">
+                  <input
+                    type="text"
+                    value={mobileOtp}
+                    onChange={(e) => setMobileOtp(e.target.value)}
+                    placeholder="Enter Mobile OTP"
+                    className="appearance-none block w-full px-4 py-3 border border-slate-300 rounded-xl shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-white text-slate-900 transition-all"
+                  />
+                  <button type="button" onClick={handleVerifyMobileOtp} disabled={verifyingMobileOtp} className="whitespace-nowrap px-5 py-3 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition-colors">
+                    {verifyingMobileOtp ? "Verifying..." : "Verify"}
+                  </button>
+                </div>
+              )}
+              {mobileOtpSent && !mobileVerified && mobileResendTimer === 0 && (
+                <div className="mt-2 text-right">
+                  <button type="button" onClick={handleSendMobileOtp} className="text-xs text-indigo-600 hover:text-indigo-800 font-medium">
+                    Resend OTP
+                  </button>
+                </div>
+              )}
+              {mobileOtpSent && !mobileVerified && mobileResendTimer > 0 && (
+                <div className="mt-2 text-right">
+                  <span className="text-xs text-slate-500 font-medium">Resend OTP in {mobileResendTimer}s</span>
+                </div>
+              )}
             </div>
 
             <div>
