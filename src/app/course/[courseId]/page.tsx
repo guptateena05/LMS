@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { getCourseDetails, getChapters, getLessons, getReviews, createChapter, createLesson, getCourseProgress, getAssignments, getAssignmentSubmissions } from '@/services/lms.services';
+import { getCourseDetails, getChapters, getLessons, getReviews, createChapter, createLesson, getCourseProgress, getAssignments, getAssignmentSubmissions, enrollInCourse } from '@/services/lms.services';
 import { getImageUrl } from '@/services/api.services';
 import Navbar from '@/components/Navbar';
 import Link from 'next/link';
@@ -34,6 +34,8 @@ export default function CourseDetailPage() {
   const [newLessonTitle, setNewLessonTitle] = useState('');
   const [newLessonBody, setNewLessonBody] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [enrollLoading, setEnrollLoading] = useState(false);
+  const [isEnrolled, setIsEnrolled] = useState(false);
 
   useEffect(() => {
     if (!courseId) return;
@@ -64,7 +66,13 @@ export default function CourseDetailPage() {
       ]);
 
       if (detailsRes.status === 'fulfilled') {
-        setDetails(detailsRes.value?.data || detailsRes.value?.message || detailsRes.value);
+        const d = detailsRes.value?.data || detailsRes.value?.message || detailsRes.value;
+        setDetails(d);
+        if (d && d.membership) {
+          setIsEnrolled(true);
+        } else {
+          setIsEnrolled(false);
+        }
       } else {
         throw new Error('Failed to fetch course details');
       }
@@ -134,6 +142,23 @@ export default function CourseDetailPage() {
       setError(err.message || 'An error occurred loading the course.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleEnroll = async () => {
+    if (!courseId) return;
+    setEnrollLoading(true);
+    try {
+      await enrollInCourse({ course: courseId });
+      alert('Successfully enrolled!');
+      setIsEnrolled(true);
+      // Refresh progress data to show "Continue Learning"
+      const progressRes = await getCourseProgress(courseId);
+      setProgress(progressRes?.message || progressRes?.data || progressRes);
+    } catch (err: any) {
+      alert(err.response?.data?.message || err.message || 'Failed to enroll in course');
+    } finally {
+      setEnrollLoading(false);
     }
   };
 
@@ -543,7 +568,7 @@ export default function CourseDetailPage() {
                   {!isFree && <span className="text-slate-400 line-through text-sm font-medium mb-1">${(details.course_price * 1.5).toFixed(2)}</span>}
                 </div>
                 
-                {progress && (
+                {isEnrolled && progress && (
                   <div className="mt-4 mb-5 bg-slate-50 p-4 rounded-xl border border-slate-100">
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Your Progress</span>
@@ -560,8 +585,13 @@ export default function CourseDetailPage() {
                   </div>
                 )}
                 
-                <button className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-bold py-3 px-4 rounded-lg transition-all shadow-md hover:shadow-lg shadow-indigo-200 transform hover:-translate-y-0.5 mt-3 flex justify-center items-center gap-2 text-sm">
-                  {progress ? 'Continue Learning' : 'Enroll Now'} <ChevronRight className="w-4 h-4" />
+                <button 
+                  onClick={isEnrolled ? undefined : handleEnroll}
+                  disabled={enrollLoading}
+                  className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-bold py-3 px-4 rounded-lg transition-all shadow-md hover:shadow-lg shadow-indigo-200 transform hover:-translate-y-0.5 mt-3 flex justify-center items-center gap-2 text-sm disabled:opacity-50"
+                >
+                  {enrollLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                  {isEnrolled ? 'Continue Learning' : (enrollLoading ? 'Enrolling...' : 'Enroll Now')} <ChevronRight className="w-4 h-4" />
                 </button>
                 {isInstructor && (
                   <Link 

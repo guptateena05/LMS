@@ -602,3 +602,22 @@ export const deleteProgram = async (name: string) => {
     }
   });
 };
+
+export const enrollInCourse = async (payload: { course: string }) => {
+  return apiService.post(`method/lms.lms.stride_lms.enroll_student`, payload, {
+    headers: { 'Authorization': `token ${API_TOKEN}` }
+  });
+};
+
+export const createCourseProgress = async (payload: { member: string, lesson: string, status: string }) => {
+  return apiService.post(`method/lms.lms.doctype.lms_course_progress.lms_course_progress.create_course_progress`, payload, {
+    headers: { 'Authorization': `token ${API_TOKEN}` }
+  });
+};
+
+export const getCourseProgressFiltered = async (filters: { name?: string, member?: string, course?: string, chapter?: string, lesson?: string, status?: string }) => {
+  return apiService.get(`method/lms.lms.doctype.lms_course_progress.lms_course_progress.get_course_progress`, {
+    params: filters,
+    headers: { 'Authorization': `token ${API_TOKEN}` }
+  });
+};

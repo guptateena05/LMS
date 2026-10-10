@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { getLesson, getCourseOutline, getCourseProgress } from '@/services/lms.services';
+import { getLesson, getChapters, getLessons, getCourseProgress, createCourseProgress } from '@/services/lms.services';
 import Navbar from '@/components/Navbar';
 import Link from 'next/link';
 import { ArrowLeft, CheckCircle, ChevronRight } from 'lucide-react';
@@ -21,15 +21,24 @@ export default function LessonPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [userEmail, setUserEmail] = useState('');
+  const [isInstructor, setIsInstructor] = useState(false);
+  const [updatingProgress, setUpdatingProgress] = useState(false);
+  const [isCompletedLocally, setIsCompletedLocally] = useState(false);
+
   useEffect(() => {
+    setUserEmail(localStorage.getItem('userEmail') || localStorage.getItem('user_email') || '');
+    setIsInstructor(localStorage.getItem('roles')?.includes('Instructor') || false);
+    
     if (!courseId || !chapterId || !lessonId) return;
 
     const fetchLesson = async () => {
       setLoading(true);
       try {
-        const [lessonRes, outlineRes, progressRes] = await Promise.allSettled([
+        const [lessonRes, chaptersRes, lessonsRes, progressRes] = await Promise.allSettled([
           getLesson({ course: courseId, chapter: chapterId, name: lessonId }),
-          getCourseOutline({ course: courseId }),
+          getChapters({ course: courseId }),
+          getLessons({ course: courseId }),
           getCourseProgress(courseId)
         ]);
 
@@ -39,13 +48,22 @@ export default function LessonPage() {
           throw new Error('Failed to load lesson content');
         }
 
-        if (outlineRes.status === 'fulfilled') {
-          setOutline(Array.isArray(outlineRes.value) ? outlineRes.value : (outlineRes.value?.data || outlineRes.value?.message || []));
+        if (chaptersRes.status === 'fulfilled' && lessonsRes.status === 'fulfilled') {
+          const rawCh = chaptersRes.value;
+          const rawLe = lessonsRes.value;
+          const chArray = Array.isArray(rawCh) ? rawCh : (rawCh?.message?.data || rawCh?.data || rawCh?.message || []);
+          const leArray = Array.isArray(rawLe) ? rawLe : (rawLe?.message?.data || rawLe?.data || rawLe?.message || []);
+          
+          const mapped = chArray.map((c: any) => ({
+            ...c,
+            lessons: leArray.filter((l: any) => l.chapter === c.name)
+          }));
+          setOutline(mapped);
         }
 
         if (progressRes.status === 'fulfilled') {
           const rawProgress = progressRes.value;
-          setProgress(rawProgress?.message || rawProgress?.data || rawProgress);
+          setProgress(rawProgress);
         }
       } catch (err: any) {
         setError(err.message || 'Could not load the lesson.');
@@ -56,6 +74,28 @@ export default function LessonPage() {
 
     fetchLesson();
   }, [courseId, chapterId, lessonId]);
+
+  const handleMarkComplete = async () => {
+    setUpdatingProgress(true);
+    try {
+      await createCourseProgress({
+        member: userEmail,
+        lesson: lessonData.name || lessonId,
+        status: "Complete"
+      });
+      setIsCompletedLocally(true);
+      setIsCompletedLocally(true);
+      // refresh progress to sync sidebar
+      const progressRes = await getCourseProgress(courseId);
+      if (progressRes?.message || progressRes?.data || progressRes) {
+        setProgress(progressRes);
+      }
+    } catch (err: any) {
+      alert(err.response?.data?.message || err.message || 'Failed to update progress');
+    } finally {
+      setUpdatingProgress(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -130,7 +170,7 @@ export default function LessonPage() {
                         >
                           {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-indigo-500 rounded-r-md shadow-[0_0_8px_rgba(99,102,241,0.8)]"></div>}
                           <CheckCircle className={`w-4 h-4 mt-0.5 mr-3 flex-shrink-0 transition-colors ${
-                            l.completed 
+                            progress?.data?.records?.some((r: any) => (r.lesson === l.name || r.lesson === l.title || r.lesson === l.lesson_name) && r.status === 'Complete') || progress?.records?.some((r: any) => (r.lesson === l.name || r.lesson === l.title || r.lesson === l.lesson_name) && r.status === 'Complete') || (isCompletedLocally && isActive)
                               ? 'text-emerald-500' 
                               : isActive ? 'text-indigo-400' : 'text-slate-600 group-hover:text-slate-500'
                           }`} />
@@ -160,14 +200,31 @@ export default function LessonPage() {
               </h1>
             </div>
             
-            <div className="flex items-center gap-3">
-              <button className="px-5 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 hover:border-slate-300 font-semibold text-sm transition-all shadow-sm">
-                Previous
-              </button>
-              <button className="px-5 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold text-sm transition-all shadow-sm shadow-indigo-200 flex items-center gap-2">
-                Next Lesson <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
+            {(() => {
+              const flatLessons = outline.flatMap(c => (c.lessons || []).map((l: any) => ({ chapterName: c.name, lessonName: l.name })));
+              const currentIndex = flatLessons.findIndex(l => l.chapterName === chapterId && l.lessonName === (lessonData.name || lessonId));
+              const prevLesson = currentIndex > 0 ? flatLessons[currentIndex - 1] : null;
+              const nextLesson = currentIndex !== -1 && currentIndex < flatLessons.length - 1 ? flatLessons[currentIndex + 1] : null;
+              
+              return (
+                <div className="flex items-center gap-3">
+                  <button 
+                    onClick={() => prevLesson && router.push(`/course/${courseId}/${encodeURIComponent(prevLesson.chapterName)}/${encodeURIComponent(prevLesson.lessonName)}`)}
+                    disabled={!prevLesson}
+                    className="px-5 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 hover:border-slate-300 font-semibold text-sm transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Previous
+                  </button>
+                  <button 
+                    onClick={() => nextLesson && router.push(`/course/${courseId}/${encodeURIComponent(nextLesson.chapterName)}/${encodeURIComponent(nextLesson.lessonName)}`)}
+                    disabled={!nextLesson}
+                    className="px-5 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold text-sm transition-all shadow-sm shadow-indigo-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Next Lesson <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              );
+            })()}
           </div>
 
           <div className="max-w-7xl mx-auto p-4 md:p-8 w-full flex-grow flex flex-col">
@@ -210,10 +267,37 @@ export default function LessonPage() {
 
             {/* Bottom Action */}
             <div className="mt-10 flex justify-end">
-              <button className="px-8 py-3.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-600/20 font-bold transition-all flex items-center gap-2 transform hover:-translate-y-0.5">
-                <CheckCircle className="w-5 h-5" />
-                Mark as Complete
-              </button>
+              {(() => {
+                const targetLessonStr = lessonData?.name || lessonId;
+                const targetLessonTitle = lessonData?.title || lessonData?.lesson_name || '';
+                const isLessonCompleted = isCompletedLocally || 
+                  progress?.data?.records?.some((r: any) => (r.lesson === targetLessonStr || r.lesson === targetLessonTitle) && r.status === 'Complete') ||
+                  progress?.records?.some((r: any) => (r.lesson === targetLessonStr || r.lesson === targetLessonTitle) && r.status === 'Complete');
+                
+                if (isLessonCompleted) {
+                  return (
+                    <div className="px-8 py-3.5 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl font-bold flex items-center gap-2">
+                      <CheckCircle className="w-5 h-5 text-emerald-500" />
+                      Completed
+                    </div>
+                  );
+                }
+                
+                return (
+                  <button 
+                    onClick={handleMarkComplete}
+                    disabled={updatingProgress}
+                    className="px-8 py-3.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-600/20 font-bold transition-all flex items-center gap-2 transform hover:-translate-y-0.5 disabled:opacity-50"
+                  >
+                    {updatingProgress ? (
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <CheckCircle className="w-5 h-5" />
+                    )}
+                    {updatingProgress ? 'Updating...' : 'Mark as Complete'}
+                  </button>
+                );
+              })()}
             </div>
             
           </div>

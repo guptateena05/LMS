@@ -12,6 +12,7 @@ export default function Navbar() {
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isInstructor, setIsInstructor] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -33,8 +34,10 @@ export default function Navbar() {
         setUserName(localStorage.getItem("fullName") || "Learner");
         setUserEmail(localStorage.getItem("userEmail") || "");
         setIsAuthenticated(true);
+        setIsInstructor(localStorage.getItem("roles")?.includes("Instructor") || false);
       } else {
         setIsAuthenticated(false);
+        setIsInstructor(false);
       }
     }
   };
@@ -97,6 +100,9 @@ export default function Navbar() {
             <Link href="/batches" className="text-gray-600 hover:text-indigo-600 transition-colors">Batches</Link>
             <Link href="/certificates" className="text-gray-600 hover:text-indigo-600 transition-colors">Certificates</Link>
             <Link href="/dashboard" className="text-gray-600 hover:text-indigo-600 transition-colors">My Dashboard</Link>
+            {isInstructor && (
+              <Link href="/progress" className="text-gray-600 hover:text-indigo-600 transition-colors">Course Progress</Link>
+            )}
             <div className="h-6 w-px bg-gray-200 mx-2"></div>
             {isAuthenticated ? (
               <div className="flex items-center space-x-6 relative">
