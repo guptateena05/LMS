@@ -200,8 +200,8 @@ export default function BatchForm({ initialData, isEdit }: BatchFormProps) {
                 </div>
 
                 <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Short Description</label>
-                  <textarea name="description" value={formData.description} onChange={handleChange} rows={2} className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-indigo-500 focus:bg-white outline-none transition-colors resize-none"></textarea>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Short Description *</label>
+                  <textarea name="description" required value={formData.description} onChange={handleChange} rows={2} className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-indigo-500 focus:bg-white outline-none transition-colors resize-none"></textarea>
                 </div>
 
                 <div>

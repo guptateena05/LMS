@@ -146,8 +146,9 @@ export default function LessonPage() {
         </aside>
 
         {/* Main Content Area */}
-        <main className="flex-grow overflow-y-auto bg-slate-50 relative flex flex-col">
-          
+        <main className="flex-grow overflow-y-auto bg-[#F8FAFC] relative flex flex-col selection:bg-indigo-100 selection:text-indigo-900">
+          {/* Subtle Background Decoration */}
+          <div className="absolute top-0 inset-x-0 h-80 bg-gradient-to-b from-indigo-50 to-transparent pointer-events-none -z-10" />
           {/* Header Banner */}
           <div className="bg-white border-b border-slate-200 px-8 py-5 shadow-sm sticky top-0 z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex flex-col gap-2">
@@ -169,7 +170,7 @@ export default function LessonPage() {
             </div>
           </div>
 
-          <div className="max-w-5xl mx-auto p-6 md:p-10 w-full flex-grow flex flex-col">
+          <div className="max-w-7xl mx-auto p-4 md:p-8 w-full flex-grow flex flex-col">
             
             {lessonData.description && (
               <div className="mb-8 p-6 bg-indigo-50 border border-indigo-100 rounded-xl">
@@ -194,8 +195,9 @@ export default function LessonPage() {
             )}
 
             {/* Lesson Body HTML */}
-            <div className="bg-white p-8 md:p-12 rounded-2xl shadow-sm border border-slate-200 flex-grow">
-              <div className="prose prose-lg prose-indigo max-w-none text-slate-700 marker:text-indigo-500" dangerouslySetInnerHTML={{ __html: lessonData.body || lessonData.content || `
+            <div className="bg-white p-8 md:p-14 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-200/60 flex-grow relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 opacity-20"></div>
+              <div className="prose prose-indigo max-w-none text-slate-600 marker:text-indigo-500 prose-headings:font-bold prose-headings:text-slate-800 prose-p:leading-relaxed prose-a:text-indigo-600 hover:prose-a:text-indigo-700 prose-pre:bg-slate-900 prose-pre:shadow-lg prose-pre:rounded-xl" dangerouslySetInnerHTML={{ __html: lessonData.body || lessonData.content || `
                 <div class="text-center py-16">
                   <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 mb-4">
                     <svg class="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>

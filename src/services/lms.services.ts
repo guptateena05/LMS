@@ -277,10 +277,10 @@ export const createChapter = async (data: FormData) => {
   });
 };
 
-export const createLesson = async (data: FormData) => {
+export const createLesson = async (data: any) => {
   return apiService.post(`method/${API_METHOD_PREFIX}.create_lesson`, data, {
     headers: { 
-      'Content-Type': 'multipart/form-data',
+      'Content-Type': 'application/json',
       'Authorization': `token ${API_TOKEN}`
     }
   });

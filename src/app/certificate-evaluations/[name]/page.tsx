@@ -99,7 +99,7 @@ export default function CertificateEvaluationDetailPage({ params }: { params: an
             <ArrowLeft className="w-4 h-4" /> Back to Evaluations
           </Link>
           <div>
-            <h1 className="text-3xl md:text-4xl font-extrabold mb-3">Evaluation: {evalData?.name || 'Loading...'}</h1>
+            <h1 className="text-3xl md:text-4xl font-extrabold mb-3">Evaluation: {evalData?.member_name || evalData?.member || 'Student'}</h1>
             <p className="text-indigo-200">Detailed report for this certificate evaluation.</p>
           </div>
         </div>

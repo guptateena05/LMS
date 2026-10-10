@@ -358,7 +358,7 @@ export default function CertificateEvaluationsPage() {
               {evaluations.map((evaluation, idx) => (
                 <div key={evaluation.name || idx} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-shadow">
                   <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-                    <h3 className="font-bold text-slate-900 truncate pr-4">{evaluation.name}</h3>
+                    <h3 className="font-bold text-slate-900 truncate pr-4">{evaluation.member_name || evaluation.member || 'Student'}</h3>
                     <span className={`px-3 py-1 text-xs font-bold rounded-full flex-shrink-0 ${
                       evaluation.status === 'Pass' ? 'bg-emerald-100 text-emerald-700' : 
                       evaluation.status === 'Fail' ? 'bg-red-100 text-red-700' : 

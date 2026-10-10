@@ -25,7 +25,7 @@ type BlockType = 'text' | 'heading' | 'list' | 'upload' | 'table' | 'quiz' | 'as
 interface Block {
   id: string;
   type: BlockType;
-  content: string | string[];
+  content: any;
 }
 
 const BLOCK_OPTIONS = [
@@ -42,6 +42,7 @@ const BLOCK_OPTIONS = [
 
 import { useRouter } from 'next/navigation';
 import { createLesson } from '@/services/lms.services';
+import { uploadFile, BASE_DOMAIN } from '@/services/api.services';
 import { Loader2 } from 'lucide-react';
 
 export default function LessonEditor({ courseId = "aaaaaaakk", chapterId = "" }: { courseId?: string, chapterId?: string }) {
@@ -60,10 +61,14 @@ export default function LessonEditor({ courseId = "aaaaaaakk", chapterId = "" }:
   const [menuFilter, setMenuFilter] = useState('');
 
   const addBlock = (index: number, type: BlockType) => {
+    let initialContent: any = '';
+    if (type === 'list') initialContent = [''];
+    if (type === 'table') initialContent = [['Column 1', 'Column 2'], ['Data 1', 'Data 2']];
+
     const newBlock: Block = {
       id: Math.random().toString(36).substring(7),
       type,
-      content: type === 'list' ? [''] : ''
+      content: initialContent
     };
     const newBlocks = [...blocks];
     newBlocks.splice(index + 1, 0, newBlock);
@@ -71,7 +76,7 @@ export default function LessonEditor({ courseId = "aaaaaaakk", chapterId = "" }:
     setActiveMenuId(null);
   };
 
-  const updateBlock = (id: string, content: string | string[]) => {
+  const updateBlock = (id: string, content: any) => {
     setBlocks(blocks.map(b => b.id === id ? { ...b, content } : b));
   };
 
@@ -110,25 +115,82 @@ export default function LessonEditor({ courseId = "aaaaaaakk", chapterId = "" }:
         if (block.type === 'list' && Array.isArray(block.content)) {
           return `<ul>${block.content.map(li => `<li>${li}</li>`).join('')}</ul>`;
         }
-        if (block.type === 'upload' && typeof block.content === 'string' && block.content.startsWith('data:image')) {
-          return `<img src="${block.content}" alt="uploaded" style="max-width: 100%; border-radius: 8px;" />`;
+        if (block.type === 'upload' && typeof block.content === 'string') {
+          const src = block.content.startsWith('/') ? `${BASE_DOMAIN}${block.content}` : block.content;
+          return `<img src="${src}" alt="uploaded" style="max-width: 100%; border-radius: 12px; border: 1px solid #e2e8f0; background-color: #f8fafc; padding: 16px;" />`;
         }
-        if (block.type === 'table') return `<pre className="table-block">${block.content}</pre>`;
+        if (block.type === 'table') {
+          if (Array.isArray(block.content)) {
+            const rows = block.content.map((row: any, i: number) => {
+              if (i === 0) return `<tr>${row.map((cell: string) => `<th style="padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; background-color: #f8fafc; font-weight: 600;">${cell}</th>`).join('')}</tr>`;
+              return `<tr>${row.map((cell: string) => `<td style="padding: 12px; border-bottom: 1px solid #f1f5f9;">${cell}</td>`).join('')}</tr>`;
+            });
+            return `<div style="overflow-x: auto; margin-bottom: 16px;"><table style="width: 100%; border-collapse: collapse; border: 1px solid #e2e8f0;">
+              <thead>${rows[0]}</thead>
+              <tbody>${rows.slice(1).join('')}</tbody>
+            </table></div>`;
+          }
+          return `<pre className="table-block">${block.content}</pre>`;
+        }
         if (block.type === 'quiz') return `<div className="quiz-block" data-id="${block.content}">[Quiz: ${block.content}]</div>`;
         if (block.type === 'assignment') return `<div className="assignment-block" data-id="${block.content}">[Assignment: ${block.content}]</div>`;
         if (block.type === 'programming') return `<div className="programming-block" data-id="${block.content}">[Programming Exercise: ${block.content}]</div>`;
         if (block.type === 'codebox') return `<pre><code>${block.content}</code></pre>`;
         if (block.type === 'text') return `<p>${block.content}</p>`;
-      }).join('\\n');
+      }).join('\n');
 
-      const fd = new FormData();
-      fd.append('course', courseId);
-      fd.append('chapter', chapterId);
-      fd.append('title', title);
-      fd.append('body', htmlBody);
-      // We can also append instructor_notes or include_preview if the backend supports it
+      const formattedBlocks = blocks.map(block => {
+        if (block.type === 'upload') {
+          return {
+            id: block.id,
+            type: "upload",
+            data: {
+              file_url: typeof block.content === 'string' ? block.content : "",
+              file_type: typeof block.content === 'string' && block.content.match(/\.(mp4|webm|ogg)$/i) ? "MP4" : "IMAGE",
+              quizzes: []
+            }
+          };
+        } else if (block.type === 'quiz') {
+          return {
+            id: block.id,
+            type: "quiz",
+            data: {
+              quiz: block.content
+            }
+          };
+        } else {
+          let textData = block.content;
+          if (Array.isArray(block.content)) {
+             textData = block.content.map(row => Array.isArray(row) ? row.join(' | ') : row).join('\n');
+          }
+          return {
+            id: block.id,
+            type: "markdown",
+            data: {
+              text: typeof textData === 'string' ? textData : JSON.stringify(textData)
+            }
+          };
+        }
+      });
 
-      await createLesson(fd);
+      const contentObj = {
+        time: Date.now(),
+        blocks: formattedBlocks,
+        version: "2.29.0"
+      };
+
+      const payload = {
+        course: decodeURIComponent(courseId || ""),
+        chapter: decodeURIComponent(chapterId || ""),
+        title: title,
+        include_in_preview: 1,
+        content: contentObj,
+        body: htmlBody || title,
+        instructor_content: instructorNotes || '',
+        instructor_notes: instructorNotes || ''
+      };
+
+      await createLesson(payload);
       alert('Lesson created successfully');
       router.push(`/course/${courseId}`);
     } catch (err) {
@@ -263,8 +325,17 @@ export default function LessonEditor({ courseId = "aaaaaaakk", chapterId = "" }:
       case 'upload':
         return (
           <div className="relative group/upload border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center text-center bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer overflow-hidden min-h-[120px]">
-            {typeof block.content === 'string' && block.content.startsWith('data:image') ? (
-              <img src={block.content} alt="Preview" className="max-w-md max-h-48 object-contain rounded-lg p-2" />
+            {block.content === 'uploading' ? (
+              <div className="p-6 flex flex-col items-center pointer-events-none">
+                <Loader2 className="w-8 h-8 text-indigo-500 animate-spin mb-2" />
+                <h4 className="font-semibold text-slate-700 text-sm">Uploading...</h4>
+              </div>
+            ) : typeof block.content === 'string' && block.content !== '' ? (
+              block.content.match(/\.(mp4|webm|ogg)$/i) ? (
+                 <video src={block.content.startsWith('/') ? `${BASE_DOMAIN}${block.content}` : block.content} controls className="max-w-md max-h-48 rounded-lg p-2" />
+              ) : (
+                 <img src={block.content.startsWith('/') ? `${BASE_DOMAIN}${block.content}` : block.content} alt="Preview" className="max-w-md max-h-48 object-contain rounded-xl p-4 border border-slate-200 bg-slate-50" />
+              )
             ) : (
               <div className="p-6 flex flex-col items-center pointer-events-none">
                 <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm border border-slate-200 mb-2 group-hover/upload:scale-105 transition-transform">
@@ -277,34 +348,121 @@ export default function LessonEditor({ courseId = "aaaaaaakk", chapterId = "" }:
             <input 
               type="file" 
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
-              accept="image/*"
-              onChange={(e) => {
+              accept="image/*,video/*"
+              disabled={block.content === 'uploading'}
+              onChange={async (e) => {
                 const file = e.target.files?.[0];
                 if (file) {
-                  const reader = new FileReader();
-                  reader.onload = (event) => {
-                    updateBlock(block.id, event.target?.result as string);
-                  };
-                  reader.readAsDataURL(file);
+                  try {
+                    updateBlock(block.id, 'uploading');
+                    const response = await uploadFile(file);
+                    // Handle Frappe's file upload response structure
+                    const fileUrl = response?.message?.file_url || response?.file_url || response;
+                    if (typeof fileUrl === 'string') {
+                      updateBlock(block.id, fileUrl);
+                    } else {
+                      updateBlock(block.id, '');
+                      alert('Upload failed: Could not get file URL');
+                    }
+                  } catch (err) {
+                    console.error('Upload error:', err);
+                    updateBlock(block.id, '');
+                    alert('Failed to upload file');
+                  }
                 }
               }}
             />
           </div>
         );
-      case 'table':
+      case 'table': {
+        const tableData = Array.isArray(block.content) ? block.content : [['Header 1', 'Header 2'], ['Data 1', 'Data 2']];
+        
+        const updateCell = (rowIndex: number, colIndex: number, value: string) => {
+          const newData = tableData.map((row: any, i: number) => 
+            i === rowIndex ? row.map((cell: any, j: number) => j === colIndex ? value : cell) : row
+          );
+          updateBlock(block.id, newData);
+        };
+        
+        const addRow = () => {
+          const cols = tableData[0]?.length || 2;
+          updateBlock(block.id, [...tableData, Array(cols).fill('')]);
+        };
+        
+        const addCol = () => {
+          const newData = tableData.map((row: any) => [...row, '']);
+          updateBlock(block.id, newData);
+        };
+
+        const removeRow = (rowIndex: number) => {
+          if (tableData.length <= 1) return;
+          updateBlock(block.id, tableData.filter((_: any, i: number) => i !== rowIndex));
+        };
+
+        const removeCol = (colIndex: number) => {
+          if (tableData[0]?.length <= 1) return;
+          updateBlock(block.id, tableData.map((row: any) => row.filter((_: any, j: number) => j !== colIndex)));
+        };
+
         return (
-          <div className="border border-slate-200 rounded-xl p-4 bg-slate-50">
-            <div className="flex items-center gap-2 mb-2 text-slate-500 font-semibold text-sm">
-              <TableIcon className="w-4 h-4" /> Markdown Table
+          <div className="border border-slate-200 rounded-xl bg-white shadow-sm overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-slate-50">
+              <div className="flex items-center gap-2 text-slate-700 font-semibold text-sm">
+                <TableIcon className="w-4 h-4 text-indigo-500" /> Table Editor
+              </div>
+              <div className="flex gap-2">
+                <button type="button" onClick={addRow} className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-medium rounded transition-colors flex items-center gap-1 shadow-sm">
+                  <Plus className="w-3 h-3" /> Row
+                </button>
+                <button type="button" onClick={addCol} className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-medium rounded transition-colors flex items-center gap-1 shadow-sm">
+                  <Plus className="w-3 h-3" /> Column
+                </button>
+              </div>
             </div>
-            <textarea
-              className="w-full resize-none bg-white border border-slate-200 rounded-lg p-3 text-slate-700 font-mono text-sm focus:outline-none focus:border-indigo-500 min-h-[100px]"
-              placeholder="| Column 1 | Column 2 |\n|----------|----------|\n| Data 1   | Data 2   |"
-              value={block.content as string}
-              onChange={(e) => updateBlock(block.id, e.target.value)}
-            />
+            
+            <div className="overflow-x-auto p-4">
+              <table className="w-full text-sm text-left border-collapse border border-slate-200 rounded-lg">
+                <tbody>
+                  {/* Top Row for Column Controls */}
+                  <tr className="bg-slate-50 border-b border-slate-200">
+                    <td className="w-10 p-0 text-center border-r border-slate-200 bg-slate-100 sticky left-0 z-20 shadow-[1px_0_0_rgba(0,0,0,0.05)]">
+                    </td>
+                    {tableData[0]?.map((_: any, colIndex: number) => (
+                      <td key={`del-col-${colIndex}`} className="p-0 text-center border-r border-slate-200 bg-slate-100 h-8 min-w-[120px]">
+                        <button type="button" onClick={() => removeCol(colIndex)} className="text-slate-400 hover:text-red-500 w-full h-full flex justify-center items-center text-[10px] uppercase font-bold tracking-wider gap-1 transition-colors" title="Remove Column">
+                           <X className="w-3 h-3" /> Del Col
+                         </button>
+                      </td>
+                    ))}
+                  </tr>
+                  
+                  {/* Data Rows */}
+                  {tableData.map((row: any, rowIndex: number) => (
+                    <tr key={`row-${rowIndex}`} className={rowIndex === 0 ? "bg-slate-50 border-b border-slate-200" : "bg-white border-b border-slate-100 last:border-0"}>
+                      <td className="w-10 p-0 text-center border-r border-slate-200 bg-slate-100 sticky left-0 z-20 shadow-[1px_0_0_rgba(0,0,0,0.05)]">
+                         <button type="button" onClick={() => removeRow(rowIndex)} className="text-slate-400 hover:text-red-500 w-full h-full p-2 flex justify-center items-center transition-colors" title="Remove Row">
+                           <X className="w-4 h-4" />
+                         </button>
+                      </td>
+                      {row.map((cell: any, colIndex: number) => (
+                        <td key={`cell-${rowIndex}-${colIndex}`} className="p-0 border-r border-slate-200 last:border-r-0 relative">
+                          <input
+                            type="text"
+                            value={cell}
+                            onChange={(e) => updateCell(rowIndex, colIndex, e.target.value)}
+                            className={`w-full min-w-[120px] p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:z-10 relative bg-transparent ${rowIndex === 0 ? 'font-bold text-slate-800' : 'text-slate-600'}`}
+                            placeholder={rowIndex === 0 ? "Header..." : "Data..."}
+                          />
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         );
+      }
       case 'quiz':
       case 'assignment':
       case 'programming':
@@ -475,7 +633,7 @@ export default function LessonEditor({ courseId = "aaaaaaakk", chapterId = "" }:
                     </div>
                     
                     {/* Block Content */}
-                    <div className="flex-1 w-full relative">
+                    <div className="flex-1 w-full relative min-w-0">
                       {renderBlockContent(block)}
                     </div>
                   </div>

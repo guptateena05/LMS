@@ -58,24 +58,12 @@ const apiRequest = async (config: AxiosRequestConfig) => {
       return response.data;
     }
 
-    // Usually Frappe sends data in `message` or `data` property
-    return response.data?.message ?? response.data?.data ?? response.data;
+    return response.data?.message || response.data;
   } catch (error: any) {
-    let errMessage = error.message || "Request failed";
-    
-    if (error.response?.data) {
-      const respData = error.response.data;
-      if (typeof respData.message === 'object' && respData.message?.message) {
-        errMessage = respData.message.message;
-      } else if (typeof respData.message === 'string') {
-        errMessage = respData.message;
-      } else if (typeof respData.error === 'string') {
-        errMessage = respData.error;
-      } else if (respData.exc_type) {
-        errMessage = respData.exception || respData.exc_type;
-      }
+    if (error.status && error.response) {
+      throw error;
     }
-    
+    const errMessage = error.response?.data?.message || error.response?.data?.exc_type || error.message || "An unexpected error occurred.";
     console.error(`API Error (${config.method} ${config.url}):`, errMessage);
     
     interface CustomApiError extends Error {
@@ -88,6 +76,21 @@ const apiRequest = async (config: AxiosRequestConfig) => {
     customError.response = error.response;
     throw customError;
   }
+};
+
+export const uploadFile = async (file: File): Promise<any> => {
+  const formData = new FormData();
+  formData.append('file', file, file.name);
+  formData.append('is_private', '0');
+  
+  return apiRequest({
+    method: 'POST',
+    url: 'method/upload_file',
+    data: formData,
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    }
+  });
 };
 
 export const apiService = {
