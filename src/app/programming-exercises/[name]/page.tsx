@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Navbar from '@/components/Navbar';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import {
   getProgrammingExercise,
   createProgrammingExerciseSubmission,
@@ -39,6 +39,8 @@ import {
 export default function SolveProgrammingExercisePage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnUrl = searchParams?.get("returnUrl");
   const exerciseName = decodeURIComponent((params?.name as string) || '');
 
   // Auth & Roles
@@ -261,15 +263,15 @@ export default function SolveProgrammingExercisePage() {
           <h2 className="text-xl font-bold text-white">Exercise Not Found</h2>
           <p className="text-sm text-slate-400">{error || 'This programming challenge does not exist.'}</p>
           <Link
-            href="/programming-exercises"
+            href={returnUrl || "/programming-exercises"}
             onClick={(e) => {
               e.preventDefault();
-              navigateBack(router, "/programming-exercises");
+              navigateBack(router, returnUrl || "/programming-exercises");
             }}
             className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-colors cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
-            Back
+            {returnUrl ? "Back to Lesson" : "Back to Exercises"}
           </Link>
         </div>
       </div>
@@ -286,15 +288,15 @@ export default function SolveProgrammingExercisePage() {
       <div className="border-b border-slate-800 bg-slate-950/80 sticky top-0 z-30 backdrop-blur-md px-4 sm:px-6 py-3.5 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3 min-w-0">
           <Link
-            href="/programming-exercises"
+            href={returnUrl || "/programming-exercises"}
             onClick={(e) => {
               e.preventDefault();
-              navigateBack(router, "/programming-exercises");
+              navigateBack(router, returnUrl || "/programming-exercises");
             }}
             className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors flex items-center gap-1.5 text-xs font-semibold cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span className="hidden sm:inline">Back</span>
+            <span className="hidden sm:inline">{returnUrl ? "Back to Lesson" : "Back"}</span>
           </Link>
 
           <div className="h-4 w-px bg-slate-800 hidden sm:block" />

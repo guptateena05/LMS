@@ -40,6 +40,10 @@ import { useRouter } from 'next/navigation';
 import Dropdown from '@/components/ui/Dropdown';
 import { showToast } from '@/components/ui/Toast';
 import { useViewMode } from '@/context/ViewModeContext';
+import {
+  PARTICIPATION_CERTIFICATE_TEMPLATES,
+  getParticipationTemplateHtml,
+} from '@/utils/certificateTemplates';
 
 interface Certificate {
   name: string;
@@ -68,7 +72,8 @@ export default function CertificatesPage() {
   const [authChecked, setAuthChecked] = useState<boolean>(false);
 
   // Instructor: Certificate Type & Templates state
-  const [selectedCertType, setSelectedCertType] = useState<'advance' | 'participation'>('advance');
+  // Default to participation certificate (which is above advance certificate)
+  const [selectedCertType, setSelectedCertType] = useState<'participation' | 'advance'>('participation');
   const [templates, setTemplates] = useState<CertificateTemplate[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
   const [previewContent, setPreviewContent] = useState<string>('');
@@ -79,27 +84,67 @@ export default function CertificatesPage() {
   const [isSettingDefault, setIsSettingDefault] = useState<boolean>(false);
   const [defaultCertificate, setDefaultCertificate] = useState<string>('');
 
-  // Templates filtered by certificate type
-  // Integrated templates are advance certification; participation has no templates yet
-  const availableTemplates = selectedCertType === 'advance' ? templates : [];
+  // Advance templates (strictly advance certificates from server, excluding any participation certificates)
+  const advanceTemplates = useMemo(() => {
+    return templates.filter((t) => {
+      const name = typeof t === 'string' ? t : t?.name || '';
+      return !name.toLowerCase().includes('participation');
+    });
+  }, [templates]);
+
+  // 4 Participation certificate templates provided client-side
+  const participationTemplates = useMemo(() => {
+    return PARTICIPATION_CERTIFICATE_TEMPLATES.map((t) => ({ name: t.name }));
+  }, []);
+
+  // Filter templates strictly based on selected certificate type
+  const availableTemplates = useMemo(() => {
+    if (selectedCertType === 'participation') {
+      return participationTemplates;
+    }
+    return advanceTemplates;
+  }, [selectedCertType, participationTemplates, advanceTemplates]);
+
+  // Helper to load preview for participation certificate templates
+  const loadParticipationPreview = (templateName: string) => {
+    if (!templateName) return;
+    setPreviewLoading(true);
+    setPreviewError(null);
+    try {
+      const html = getParticipationTemplateHtml(templateName, {
+        studentName: 'Alex Morgan',
+        courseTitle: 'Complete Full-Stack Web & Cloud Architecture',
+        instructorName: 'Academic Director & Course Instructor',
+      });
+      setPreviewContent(html);
+    } catch (err: any) {
+      setPreviewError(err?.message || 'Failed to render participation certificate preview');
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
 
   // Handle Certificate Type switch
-  const handleCertTypeChange = async (type: 'advance' | 'participation') => {
+  const handleCertTypeChange = async (type: 'participation' | 'advance') => {
     setSelectedCertType(type);
-    if (type === 'advance') {
-      if (templates.length > 0) {
-        const first = templates[0];
-        const defaultName = typeof first === 'string' ? first : first.name;
+    if (type === 'participation') {
+      const first = participationTemplates[0]?.name || '';
+      setSelectedTemplate(first);
+      loadParticipationPreview(first);
+    } else {
+      if (advanceTemplates.length > 0) {
+        const matchDefault = advanceTemplates.find((t) => {
+          const tName = typeof t === 'string' ? t : t?.name;
+          return tName === defaultCertificate;
+        });
+        const chosen = matchDefault || advanceTemplates[0];
+        const defaultName = typeof chosen === 'string' ? chosen : chosen.name;
         setSelectedTemplate(defaultName);
         await loadPreview(defaultName);
       } else {
         setSelectedTemplate('');
         setPreviewContent('');
       }
-    } else {
-      setSelectedTemplate('');
-      setPreviewContent('');
-      setPreviewError(null);
     }
   };
 
@@ -333,8 +378,12 @@ export default function CertificatesPage() {
       setTemplates(validTemplates);
 
       if (selectedCertType === 'advance') {
-        if (validTemplates.length > 0) {
-          const first = validTemplates[0];
+        const advList = validTemplates.filter((t) => {
+          const name = typeof t === 'string' ? t : t?.name || '';
+          return !name.toLowerCase().includes('participation');
+        });
+        if (advList.length > 0) {
+          const first = advList[0];
           const defaultName = typeof first === 'string' ? first : first.name;
           setSelectedTemplate(defaultName);
           await loadPreview(defaultName);
@@ -343,8 +392,9 @@ export default function CertificatesPage() {
           setPreviewContent('');
         }
       } else {
-        setSelectedTemplate('');
-        setPreviewContent('');
+        const defaultName = PARTICIPATION_CERTIFICATE_TEMPLATES[0]?.name || '';
+        setSelectedTemplate(defaultName);
+        loadParticipationPreview(defaultName);
       }
     } catch (err: any) {
       setTemplatesError(err?.message || 'Failed to fetch certificate templates');
@@ -361,6 +411,11 @@ export default function CertificatesPage() {
     const effectiveIsInstructor = isInst && viewMode === 'instructor';
     if (effectiveIsInstructor) {
       fetchTemplates();
+      if (selectedCertType === 'participation') {
+        const defaultName = PARTICIPATION_CERTIFICATE_TEMPLATES[0].name;
+        setSelectedTemplate(defaultName);
+        loadParticipationPreview(defaultName);
+      }
     } else {
       // Student role flow: fetch earned certificates
       fetchStudentCertificates();
@@ -369,7 +424,11 @@ export default function CertificatesPage() {
 
   const handleSelectTemplate = (name: string) => {
     setSelectedTemplate(name);
-    loadPreview(name);
+    if (selectedCertType === 'participation') {
+      loadParticipationPreview(name);
+    } else {
+      loadPreview(name);
+    }
   };
 
   // Check if preview content is a direct URL (e.g. PDF or image)
@@ -515,10 +574,10 @@ export default function CertificatesPage() {
                   <Dropdown
                     id="certificate-type-select"
                     value={selectedCertType}
-                    onChange={(val: string) => handleCertTypeChange(val as 'advance' | 'participation')}
+                    onChange={(val: string) => handleCertTypeChange(val as 'participation' | 'advance')}
                     options={[
-                      { value: 'advance', label: 'Advance Certificate' },
                       { value: 'participation', label: 'Participation Certificate' },
+                      { value: 'advance', label: 'Advance Certificate' },
                     ]}
                     placeholder="Select Certificate Type"
                     modalTitle="SELECT CERTIFICATE TYPE"
@@ -537,15 +596,13 @@ export default function CertificatesPage() {
                       return { value: name, label: name };
                     })}
                     placeholder={
-                      selectedCertType === 'participation'
-                        ? 'No templates available'
-                        : templatesLoading
+                      templatesLoading && selectedCertType === 'advance'
                         ? 'Loading templates...'
                         : 'Select Certificate Template'
                     }
                     modalTitle="SELECT TEMPLATE"
                     searchable
-                    disabled={selectedCertType === 'participation' || templatesLoading || availableTemplates.length === 0}
+                    disabled={availableTemplates.length === 0}
                     triggerClassName="!bg-white !border-slate-200 hover:!border-slate-300 !rounded-xl !text-sm !font-semibold !py-2.5 !px-3.5 shadow-sm"
                   />
                 </div>
@@ -554,8 +611,15 @@ export default function CertificatesPage() {
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => selectedTemplate && loadPreview(selectedTemplate)}
-                    disabled={previewLoading || !selectedTemplate || selectedCertType === 'participation'}
+                    onClick={() => {
+                      if (!selectedTemplate) return;
+                      if (selectedCertType === 'participation') {
+                        loadParticipationPreview(selectedTemplate);
+                      } else {
+                        loadPreview(selectedTemplate);
+                      }
+                    }}
+                    disabled={previewLoading || !selectedTemplate}
                     title="Refresh Preview"
                     className="p-2.5 bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
@@ -617,27 +681,37 @@ export default function CertificatesPage() {
             </div>
 
             {/* Template Status / Meta Bar */}
-            {selectedCertType === 'advance' && selectedTemplate ? (
+            {selectedTemplate ? (
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-4 px-4 py-2.5 bg-amber-50/60 rounded-xl border border-amber-100 text-xs">
                 <div className="flex items-center gap-2 text-amber-900 font-semibold truncate">
                   <Sparkles className="w-4 h-4 text-amber-600 flex-shrink-0" />
                   <span className="truncate">
                     Current Template: <strong className="text-amber-950 font-bold">{selectedTemplate}</strong>
                   </span>
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-700 border border-purple-200">
-                    Advance Certificate
+                  <span
+                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      selectedCertType === 'participation'
+                        ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                        : 'bg-purple-100 text-purple-700 border border-purple-200'
+                    }`}
+                  >
+                    {selectedCertType === 'participation' ? 'Participation Certificate' : 'Advance Certificate'}
                   </span>
-                  {defaultCertificate === selectedTemplate && (
+                  {selectedCertType === 'participation' ? (
+                    <span className="inline-flex items-center gap-1 bg-emerald-100/90 text-emerald-800 font-bold text-[10px] px-2 py-0.5 rounded-full ml-1">
+                      Auto-generated on Course Completion
+                    </span>
+                  ) : defaultCertificate === selectedTemplate ? (
                     <span className="inline-flex items-center gap-1 bg-amber-200/90 text-amber-950 font-bold text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider ml-1">
                       <Check className="w-3 h-3" /> Default
                     </span>
-                  )}
+                  ) : null}
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-slate-500 font-medium flex-shrink-0">
-                    {templates.length} template{templates.length === 1 ? '' : 's'} loaded
+                    {availableTemplates.length} template{availableTemplates.length === 1 ? '' : 's'} available
                   </span>
-                  {defaultCertificate !== selectedTemplate && (
+                  {selectedCertType === 'advance' && defaultCertificate !== selectedTemplate && (
                     <button
                       type="button"
                       onClick={handleSetDefaultCertificate}
@@ -654,46 +728,17 @@ export default function CertificatesPage() {
                   )}
                 </div>
               </div>
-            ) : selectedCertType === 'participation' ? (
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-4 px-4 py-2.5 bg-slate-50 rounded-xl border border-slate-200 text-xs">
-                <div className="flex items-center gap-2 text-slate-700 font-semibold">
-                  <Award className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                  <span>Type: <strong className="text-slate-900 font-bold">Participation Certificate</strong></span>
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200">
-                    Auto-generated on Course Completion
-                  </span>
-                </div>
-                <div className="text-slate-500 font-medium">
-                  0 templates configured (templates will be added later)
-                </div>
-              </div>
             ) : null}
 
             {/* Preview Display Container */}
             <div className="mt-6">
-              {selectedCertType === 'participation' ? (
-                <div className="text-center py-24 bg-slate-50 rounded-2xl border border-dashed border-slate-200 flex flex-col items-center">
-                  <div className="bg-emerald-50 p-4 rounded-2xl border border-emerald-100 shadow-xs mb-3">
-                    <Award className="w-10 h-10 text-emerald-600" />
-                  </div>
-                  <h3 className="text-base font-bold text-slate-900 mb-1">
-                    Participation Certificate Templates
-                  </h3>
-                  <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
-                    Every student automatically receives a Participation Certificate upon completing a course. Template designs for participation certificates are not yet available and will be added later.
-                  </p>
-                  <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-xs text-slate-600 font-medium">
-                    <Clock className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Templates will be added later</span>
-                  </div>
-                </div>
-              ) : templatesLoading ? (
+              {templatesLoading && selectedCertType === 'advance' ? (
                 <div className="flex flex-col items-center justify-center py-28 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">
                   <div className="animate-spin rounded-full h-12 w-12 border-3 border-amber-500 border-t-transparent mb-3"></div>
                   <p className="text-sm font-semibold text-slate-700">Loading Certificate Templates...</p>
                   <p className="text-xs text-slate-400 mt-1">Fetching available design templates from server</p>
                 </div>
-              ) : templatesError ? (
+              ) : templatesError && selectedCertType === 'advance' ? (
                 <div className="py-16 px-6 bg-red-50 rounded-2xl border border-red-200 text-center max-w-xl mx-auto my-6">
                   <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-3">
                     <AlertCircle className="w-6 h-6" />
@@ -723,7 +768,13 @@ export default function CertificatesPage() {
                   <p className="text-xs text-slate-600 mb-4">{previewError}</p>
                   <button
                     type="button"
-                    onClick={() => loadPreview(selectedTemplate)}
+                    onClick={() => {
+                      if (selectedCertType === 'participation') {
+                        loadParticipationPreview(selectedTemplate);
+                      } else {
+                        loadPreview(selectedTemplate);
+                      }
+                    }}
                     className="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-all cursor-pointer"
                   >
                     <RotateCcw className="w-3.5 h-3.5" /> Retry Preview

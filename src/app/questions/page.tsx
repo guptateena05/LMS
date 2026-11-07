@@ -104,14 +104,14 @@ export default function QuestionsPage() {
       <main className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full -mt-6 relative z-20">
         <div className="mb-4">
           <Link
-            href="/dashboard"
+            href="/quizzes?tab=questions"
             onClick={(e) => {
               e.preventDefault();
-              navigateBack(router, "/dashboard");
+              navigateBack(router, "/quizzes?tab=questions");
             }}
             className="inline-flex items-center text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors cursor-pointer"
           >
-            <ArrowLeft className="w-4 h-4 mr-1.5" /> Back
+            <ArrowLeft className="w-4 h-4 mr-1.5" /> Back to Question Bank
           </Link>
         </div>
 

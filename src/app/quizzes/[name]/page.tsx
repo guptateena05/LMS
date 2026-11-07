@@ -124,6 +124,9 @@ export default function QuizDetailsPage() {
   const returnCourseId = searchParams?.get("courseId");
   const returnChapterId = searchParams?.get("chapterId");
   const returnLessonId = searchParams?.get("lessonId");
+  const returnLessonHref = returnCourseId && returnChapterId && returnLessonId
+    ? `/course/${encodeURIComponent(returnCourseId)}/${encodeURIComponent(returnChapterId)}/${encodeURIComponent(returnLessonId)}`
+    : null;
 
   const [quiz, setQuiz] = useState<QuizDetails | null>(null);
   const [loading, setLoading] = useState(true);
@@ -550,14 +553,14 @@ export default function QuizDetailsPage() {
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Quiz Not Found</h2>
             <p className="text-gray-500 mb-6 text-sm">{error || "The requested assessment could not be loaded."}</p>
             <Link
-              href="/quizzes"
+              href={returnLessonHref || "/quizzes"}
               onClick={(e) => {
                 e.preventDefault();
-                navigateBack(router, "/quizzes");
+                navigateBack(router, returnLessonHref || "/quizzes");
               }}
               className="inline-flex justify-center items-center px-4 py-2.5 font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 transition-colors w-full text-sm shadow-sm cursor-pointer"
             >
-              Back to Previous Screen
+              {returnLessonHref ? "Back to Lesson" : "Back to Previous Screen"}
             </Link>
           </div>
         </div>
@@ -1165,15 +1168,15 @@ export default function QuizDetailsPage() {
         <div className="max-w-3xl mx-auto relative z-10">
           <div className="mb-4 flex items-center justify-between text-xs">
             <Link
-              href="/quizzes"
+              href={returnLessonHref || "/quizzes"}
               onClick={(e) => {
                 e.preventDefault();
-                navigateBack(router, "/quizzes");
+                navigateBack(router, returnLessonHref || "/quizzes");
               }}
               className="inline-flex items-center gap-1.5 font-medium text-indigo-200 hover:text-white transition-colors cursor-pointer"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              Back
+              {returnLessonHref ? "Back to Lesson" : "Back to Quizzes"}
             </Link>
             {isInstructor && (
               <Link

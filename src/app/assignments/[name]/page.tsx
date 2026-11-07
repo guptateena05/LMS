@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Navbar from '@/components/Navbar';
 import Link from 'next/link';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { getAssignment, createAssignmentSubmission, updateAssignmentSubmission, updateAssignment, deleteAssignment, getAssignmentSubmissions, getAssignmentResult } from '@/services/lms.services';
 import { getImageUrl, getCurrentUserEmail } from '@/services/api.services';
 import { navigateBack } from '@/utils/navigation';
@@ -15,8 +15,10 @@ import { useViewMode } from '@/context/ViewModeContext';
 export default function AssignmentDetailPage() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const name = Array.isArray(params?.name) ? params.name[0] : params?.name;
   const { viewMode } = useViewMode();
+  const returnUrl = searchParams?.get("returnUrl");
 
   const [assignment, setAssignment] = useState<any>(null);
   const [submissions, setSubmissions] = useState<any[]>([]);
@@ -394,15 +396,15 @@ export default function AssignmentDetailPage() {
       <div className="bg-slate-900 text-white py-10 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <Link
-            href="/assignments"
+            href={returnUrl || "/assignments"}
             onClick={(e) => {
               e.preventDefault();
-              navigateBack(router, "/assignments");
+              navigateBack(router, returnUrl || "/assignments");
             }}
             className="inline-flex items-center text-indigo-300 hover:text-white mb-6 transition-colors text-sm font-medium cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
+            {returnUrl ? "Back to Lesson" : "Back to Assignments"}
           </Link>
           
           {loading ? (

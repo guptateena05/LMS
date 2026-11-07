@@ -428,8 +428,9 @@ function EditorBlockRenderer({
       const quizId = block.data?.quiz || block.data?.id || '';
       if (!quizId) return null;
       const isDone = isQuizCompleted ? isQuizCompleted(quizId) : false;
+      const lessonReturnUrl = `/course/${encodeURIComponent(courseId || '')}/${encodeURIComponent(chapterId || '')}/${encodeURIComponent(lessonId || '')}`;
       const returnParams = courseId && chapterId && lessonId
-        ? `?courseId=${encodeURIComponent(courseId)}&chapterId=${encodeURIComponent(chapterId)}&lessonId=${encodeURIComponent(lessonId)}`
+        ? `?courseId=${encodeURIComponent(courseId)}&chapterId=${encodeURIComponent(chapterId)}&lessonId=${encodeURIComponent(lessonId)}&returnUrl=${encodeURIComponent(lessonReturnUrl)}`
         : '';
       return (
         <div id="lesson-quiz-section" className="my-6 p-5 md:p-6 bg-gradient-to-br from-indigo-50/70 via-white to-purple-50/40 rounded-2xl border border-indigo-100 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -476,6 +477,7 @@ function EditorBlockRenderer({
     case 'assignment': {
       const assignmentId = block.data?.assignment || block.data?.id || '';
       if (!assignmentId) return null;
+      const lessonReturnUrl = `/course/${encodeURIComponent(courseId || '')}/${encodeURIComponent(chapterId || '')}/${encodeURIComponent(lessonId || '')}`;
       return (
         <div className="my-6 p-5 md:p-6 bg-gradient-to-br from-violet-50/70 via-white to-indigo-50/40 rounded-2xl border border-violet-100 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-start gap-3.5">
@@ -497,7 +499,7 @@ function EditorBlockRenderer({
             </div>
           </div>
           <Link
-            href={`/assignments/${encodeURIComponent(assignmentId)}`}
+            href={`/assignments/${encodeURIComponent(assignmentId)}?returnUrl=${encodeURIComponent(lessonReturnUrl)}`}
             className="w-full sm:w-auto px-5 py-2.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-violet-600/20 flex items-center justify-center gap-1.5 shrink-0"
           >
             <FileText className="w-4 h-4" />
@@ -511,6 +513,7 @@ function EditorBlockRenderer({
     case 'program': {
       const exerciseId = block.data?.programming_exercise || block.data?.exercise || block.data?.id || '';
       if (!exerciseId) return null;
+      const lessonReturnUrl = `/course/${encodeURIComponent(courseId || '')}/${encodeURIComponent(chapterId || '')}/${encodeURIComponent(lessonId || '')}`;
       return (
         <div className="my-6 p-5 md:p-6 bg-gradient-to-br from-emerald-50/70 via-white to-teal-50/40 rounded-2xl border border-emerald-100 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-start gap-3.5">
@@ -532,7 +535,7 @@ function EditorBlockRenderer({
             </div>
           </div>
           <Link
-            href={`/programming-exercises?exercise=${encodeURIComponent(exerciseId)}`}
+            href={`/programming-exercises/${encodeURIComponent(exerciseId)}?returnUrl=${encodeURIComponent(lessonReturnUrl)}`}
             className="w-full sm:w-auto px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-600/20 flex items-center justify-center gap-1.5 shrink-0"
           >
             <Code className="w-4 h-4" />
@@ -2456,7 +2459,7 @@ export default function LessonPage() {
                         </div>
                       </div>
                       <Link
-                        href={`/quizzes/${encodeURIComponent(attachedQuizId)}?courseId=${encodeURIComponent(courseId)}&chapterId=${encodeURIComponent(chapterId)}&lessonId=${encodeURIComponent(currentTargetId)}`}
+                        href={`/quizzes/${encodeURIComponent(attachedQuizId)}?courseId=${encodeURIComponent(courseId)}&chapterId=${encodeURIComponent(chapterId)}&lessonId=${encodeURIComponent(currentTargetId)}&returnUrl=${encodeURIComponent(`/course/${encodeURIComponent(courseId)}/${encodeURIComponent(chapterId)}/${encodeURIComponent(currentTargetId)}`)}`}
                         className={`w-full sm:w-auto px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-md flex items-center justify-center gap-1.5 shrink-0 ${
                           isCurrentLessonQuizCompleted
                             ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
@@ -2491,7 +2494,7 @@ export default function LessonPage() {
                         </div>
                       </div>
                       <Link
-                        href={`/assignments/${encodeURIComponent(attachedAssignmentId)}`}
+                        href={`/assignments/${encodeURIComponent(attachedAssignmentId)}?returnUrl=${encodeURIComponent(`/course/${encodeURIComponent(courseId)}/${encodeURIComponent(chapterId)}/${encodeURIComponent(currentTargetId)}`)}`}
                         className="w-full sm:w-auto px-5 py-2.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-violet-600/20 flex items-center justify-center gap-1.5 shrink-0"
                       >
                         <FileText className="w-4 h-4" />
@@ -2522,7 +2525,7 @@ export default function LessonPage() {
                         </div>
                       </div>
                       <Link
-                        href={`/programming-exercises?exercise=${encodeURIComponent(attachedExerciseId)}`}
+                        href={`/programming-exercises/${encodeURIComponent(attachedExerciseId)}?returnUrl=${encodeURIComponent(`/course/${encodeURIComponent(courseId)}/${encodeURIComponent(chapterId)}/${encodeURIComponent(currentTargetId)}`)}`}
                         className="w-full sm:w-auto px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-600/20 flex items-center justify-center gap-1.5 shrink-0"
                       >
                         <Code className="w-4 h-4" />
