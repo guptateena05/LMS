@@ -307,12 +307,12 @@ export default function CourseProgressPage() {
         }
 
         if (isMounted && Array.isArray(outlineList)) {
-          const sortedOutline = [...outlineList].sort(compareCurriculumItems);
+          const sortedOutline = outlineList;
           const formattedChapters: ChapterOption[] = sortedOutline.map((ch: any) => ({
             name: ch.name || '',
             title: ch.title || ch.name || 'Untitled Chapter',
             course: filters.course,
-            lessons: Array.isArray(ch.lessons) ? [...ch.lessons].sort(compareCurriculumItems).map((l: any) => ({
+            lessons: Array.isArray(ch.lessons) ? ch.lessons.map((l: any) => ({
               name: l.name || '',
               title: l.title || l.lesson_name || l.name || 'Untitled Lesson',
               chapter: ch.name || '',

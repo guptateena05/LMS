@@ -153,6 +153,22 @@ export default function CourseDetailPage() {
   const REVIEWS_PER_PAGE = 4;
   const totalReviewPages = Math.max(1, Math.ceil(reviews.length / REVIEWS_PER_PAGE));
 
+  // Chapter Pagination State (10 chapters per page)
+  const [chapterPage, setChapterPage] = useState<number>(1);
+  const CHAPTERS_PER_PAGE = 10;
+  const totalChapterPages = Math.max(1, Math.ceil(outline.length / CHAPTERS_PER_PAGE));
+
+  const paginatedChapters = outline.slice(
+    (chapterPage - 1) * CHAPTERS_PER_PAGE,
+    chapterPage * CHAPTERS_PER_PAGE
+  );
+
+  useEffect(() => {
+    if (chapterPage > totalChapterPages) {
+      setChapterPage(totalChapterPages);
+    }
+  }, [totalChapterPages, chapterPage]);
+
   // Certificate Generation State for Student Role
   const [generatingCertificate, setGeneratingCertificate] = useState(false);
   const [createdCertificate, setCreatedCertificate] = useState<any>(null);
@@ -376,27 +392,32 @@ export default function CourseDetailPage() {
         ? (enrollRes.value as any).chapters
         : [];
 
-      const hasLessons = (arr: any[]) => Array.isArray(arr) && arr.some((ch: any) => Array.isArray(ch?.lessons) && ch.lessons.length > 0);
-
       let baseChapters: any[] = [];
-      if (hasLessons(enrollChapters)) {
-        baseChapters = enrollChapters;
-      } else if (hasLessons(courseChapters)) {
-        baseChapters = courseChapters;
-      } else if (hasLessons(outlineChapters)) {
-        baseChapters = outlineChapters;
-      } else if (enrollChapters.length > 0) {
-        baseChapters = enrollChapters;
-      } else if (courseChapters.length > 0) {
-        baseChapters = courseChapters;
+      if (courseChapters.length > 0) {
+        baseChapters = [...courseChapters];
       } else if (outlineChapters.length > 0) {
-        baseChapters = outlineChapters;
+        baseChapters = [...outlineChapters];
+      } else if (enrollChapters.length > 0) {
+        baseChapters = [...enrollChapters];
+      }
+
+      // Append any missing chapters from other sources if any
+      for (const otherCh of [...enrollChapters, ...outlineChapters]) {
+        if (!otherCh) continue;
+        const oName = String(otherCh.name || otherCh.title || '').trim().toLowerCase();
+        const exists = baseChapters.some(c => {
+          const cName = String(c.name || c.title || '').trim().toLowerCase();
+          return cName === oName;
+        });
+        if (!exists) {
+          baseChapters.push(otherCh);
+        }
       }
 
       if (baseChapters.length > 0) {
-        // Sort chapters consistently using sequence numbers, creation timestamp, and title numbering
-        const sortedChapters = [...baseChapters].sort(compareCurriculumItems);
-        const allSourceChapters = [...enrollChapters, ...courseChapters, ...outlineChapters];
+        // Strictly maintain the sequence as per in the API response
+        const sortedChapters = baseChapters;
+        const allSourceChapters = [...courseChapters, ...enrollChapters, ...outlineChapters];
 
         const mergedOutline = sortedChapters.map(chapter => {
           let chLessons: any[] = Array.isArray(chapter.lessons) && chapter.lessons.length > 0 ? chapter.lessons : [];
@@ -424,8 +445,8 @@ export default function CourseDetailPage() {
             });
           }
 
-          // Sort lessons inside this chapter consistently by sequence, creation timestamp, and title numbering
-          const sortedLessons = [...chLessons].sort(compareCurriculumItems);
+          // Strictly maintain lesson sequence as per in the API response
+          const sortedLessons = chLessons;
 
           return {
             ...chapter,
@@ -1606,121 +1627,143 @@ export default function CourseDetailPage() {
 
             {outline.length > 0 ? (
               <div className="space-y-3">
-                {outline.map((chapter: any, index: number) => (
-                  <div key={chapter.name || index} className="border border-slate-200 rounded-lg overflow-hidden transition-all hover:border-indigo-200 group">
-                    <div className="bg-slate-50 px-5 py-3 border-b border-slate-100 group-hover:bg-indigo-50/50 transition-colors">
-                      <h3 className="text-base font-bold text-slate-900 flex items-center gap-3">
-                        <span className="flex items-center justify-center w-6 h-6 rounded bg-indigo-100 text-indigo-700 text-xs">
-                          {index + 1}
-                        </span>
-                        {chapter.title || chapter.chapter_name || chapter.name}
-                      </h3>
-                    </div>
-                    <div className="px-5 py-1 bg-white">
-                      {chapter.lessons && chapter.lessons.length > 0 ? (
-                        <ul className="divide-y divide-slate-100">
-                          {chapter.lessons.map((lesson: any, lIndex: number) => {
-                            const isPaywallLocked = !isInstructor && !isUserEnrolled && isPaid && !isFree && (lesson.is_locked === true || (!lesson.include_in_preview && lesson.include_in_preview !== 1));
-                            const isSequentialLocked = isLessonSequentiallyLocked(lesson);
-                            const isLocked = isPaywallLocked || isSequentialLocked;
-                            const isPreview = !isInstructor && !isUserEnrolled && Boolean(lesson.include_in_preview === 1 || lesson.include_in_preview === true);
-                            const isLessonQuizDone = isLessonQuizComplete(lesson);
-                            const isLessonCompleted = isUserEnrolled && (isInstructor || isLessonQuizDone) && (isCourseComplete || checkOutlineLessonComplete(lesson));
-                            const lessonQuizIds = getLessonQuizIds(lesson);
-                            const hasQuiz = lessonQuizIds.length > 0;
+                {paginatedChapters.map((chapter: any, index: number) => {
+                  const chapterNumber = (chapterPage - 1) * CHAPTERS_PER_PAGE + index + 1;
+                  return (
+                    <div key={chapter.name || chapterNumber} className="border border-slate-200 rounded-lg overflow-hidden transition-all hover:border-indigo-200 group">
+                      <div className="bg-slate-50 px-5 py-3 border-b border-slate-100 group-hover:bg-indigo-50/50 transition-colors">
+                        <h3 className="text-base font-bold text-slate-900 flex items-center gap-3">
+                          <span className="flex items-center justify-center w-6 h-6 rounded bg-indigo-100 text-indigo-700 text-xs">
+                            {chapterNumber}
+                          </span>
+                          {chapter.title || chapter.chapter_name || chapter.name}
+                        </h3>
+                      </div>
+                      <div className="px-5 py-1 bg-white">
+                        {chapter.lessons && chapter.lessons.length > 0 ? (
+                          <ul className="divide-y divide-slate-100">
+                            {chapter.lessons.map((lesson: any, lIndex: number) => {
+                              const isPaywallLocked = !isInstructor && !isUserEnrolled && isPaid && !isFree && (lesson.is_locked === true || (!lesson.include_in_preview && lesson.include_in_preview !== 1));
+                              const isSequentialLocked = isLessonSequentiallyLocked(lesson);
+                              const isLocked = isPaywallLocked || isSequentialLocked;
+                              const isPreview = !isInstructor && !isUserEnrolled && Boolean(lesson.include_in_preview === 1 || lesson.include_in_preview === true);
+                              const isLessonQuizDone = isLessonQuizComplete(lesson);
+                              const isLessonCompleted = isUserEnrolled && (isInstructor || isLessonQuizDone) && (isCourseComplete || checkOutlineLessonComplete(lesson));
+                              const lessonQuizIds = getLessonQuizIds(lesson);
+                              const hasQuiz = lessonQuizIds.length > 0;
 
-                            const lessonHref = `/course/${courseId}/${encodeURIComponent(chapter.name)}/${encodeURIComponent(lesson.name)}`;
+                              const lessonHref = `/course/${courseId}/${encodeURIComponent(chapter.name)}/${encodeURIComponent(lesson.name)}`;
 
-                            return (
-                              <li key={lesson.name || lIndex} className="py-3 flex justify-between items-center group/lesson">
-                                <div className="flex items-center gap-2.5 min-w-0 pr-3">
-                                  {isLocked ? (
-                                    <div className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 shrink-0">
-                                      <Lock className="w-3 h-3 text-slate-400" />
+                              return (
+                                <li key={lesson.name || lIndex} className="py-3 flex justify-between items-center group/lesson">
+                                  <div className="flex items-center gap-2.5 min-w-0 pr-3">
+                                    {isLocked ? (
+                                      <div className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 shrink-0">
+                                        <Lock className="w-3 h-3 text-slate-400" />
+                                      </div>
+                                    ) : isLessonCompleted ? (
+                                      <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
+                                    ) : (
+                                      <PlayCircle className="w-4 h-4 text-slate-300 group-hover/lesson:text-indigo-500 transition-colors shrink-0" />
+                                    )}
+                                    {isLocked ? (
+                                      <span className="text-sm font-medium text-slate-400 cursor-not-allowed truncate">
+                                        {lesson.title || lesson.lesson_name || lesson.name}
+                                      </span>
+                                    ) : (
+                                      <Link
+                                        href={lessonHref}
+                                        className={`text-sm font-medium transition-colors truncate hover:text-indigo-600 ${isLessonCompleted ? "text-slate-800 font-semibold" : "text-slate-700 hover:text-slate-900"}`}
+                                      >
+                                        {lesson.title || lesson.lesson_name || lesson.name}
+                                      </Link>
+                                    )}
+                                    {isLessonCompleted && (
+                                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-full ml-1.5 shrink-0 shadow-2xs">
+                                        Completed
+                                      </span>
+                                    )}
+                                    {hasQuiz && !isInstructor && (
+                                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ml-1.5 shrink-0 flex items-center gap-1 ${
+                                        isLessonQuizDone 
+                                          ? 'text-emerald-700 bg-emerald-50 border border-emerald-200/80 shadow-2xs' 
+                                          : 'text-amber-700 bg-amber-50 border border-amber-200/80 shadow-2xs'
+                                      }`}>
+                                        {isLessonQuizDone ? 'Quiz ✓' : 'Quiz Required'}
+                                      </span>
+                                    )}
+                                    {isPreview && (
+                                      <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-full ml-1.5 shrink-0 shadow-xs">
+                                        Free Preview
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {isPaywallLocked ? (
+                                    <button
+                                      onClick={() => router.push(`/checkout?item_type=course&item_id=${encodeURIComponent(courseId)}`)}
+                                      className="flex items-center gap-1 text-indigo-600 hover:text-indigo-700 text-xs font-bold transition-all px-2.5 py-1 rounded-md hover:bg-indigo-50 cursor-pointer shrink-0"
+                                      title="Unlock course to access this lesson"
+                                    >
+                                      <Lock className="w-3 h-3" /> Unlock
+                                    </button>
+                                  ) : isSequentialLocked ? (
+                                    <div
+                                      className="flex items-center gap-1 text-slate-400 text-xs font-semibold px-2.5 py-1 rounded-md select-none cursor-not-allowed shrink-0"
+                                      title="Complete the previous lesson to unlock this lesson"
+                                    >
+                                      <Lock className="w-3 h-3 text-slate-400" /> Locked
                                     </div>
-                                  ) : isLessonCompleted ? (
-                                    <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
-                                  ) : (
-                                    <PlayCircle className="w-4 h-4 text-slate-300 group-hover/lesson:text-indigo-500 transition-colors shrink-0" />
-                                  )}
-                                  {isLocked ? (
-                                    <span className="text-sm font-medium text-slate-400 cursor-not-allowed truncate">
-                                      {lesson.title || lesson.lesson_name || lesson.name}
-                                    </span>
                                   ) : (
                                     <Link
                                       href={lessonHref}
-                                      className={`text-sm font-medium transition-colors truncate hover:text-indigo-600 ${isLessonCompleted ? "text-slate-800 font-semibold" : "text-slate-700 hover:text-slate-900"}`}
+                                      className="flex items-center gap-1 text-indigo-600 hover:text-indigo-700 text-xs font-bold transition-all px-2.5 py-1 rounded-md hover:bg-indigo-50 shrink-0"
                                     >
-                                      {lesson.title || lesson.lesson_name || lesson.name}
+                                      {isInstructor ? "Start Lesson" : (isPreview ? "Preview" : (isLessonCompleted ? "Review" : "Start"))} <ChevronRight className="w-3 h-3" />
                                     </Link>
                                   )}
-                                  {isLessonCompleted && (
-                                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-full ml-1.5 shrink-0 shadow-2xs">
-                                      Completed
-                                    </span>
-                                  )}
-                                  {hasQuiz && !isInstructor && (
-                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ml-1.5 shrink-0 flex items-center gap-1 ${
-                                      isLessonQuizDone 
-                                        ? 'text-emerald-700 bg-emerald-50 border border-emerald-200/80 shadow-2xs' 
-                                        : 'text-amber-700 bg-amber-50 border border-amber-200/80 shadow-2xs'
-                                    }`}>
-                                      {isLessonQuizDone ? 'Quiz ✓' : 'Quiz Required'}
-                                    </span>
-                                  )}
-                                  {isPreview && (
-                                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-full ml-1.5 shrink-0 shadow-xs">
-                                      Free Preview
-                                    </span>
-                                  )}
-                                </div>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        ) : (
+                          <p className="text-xs text-slate-400 py-3 italic">No lessons in this chapter.</p>
+                        )}
 
-                                {isPaywallLocked ? (
-                                  <button
-                                    onClick={() => router.push(`/checkout?item_type=course&item_id=${encodeURIComponent(courseId)}`)}
-                                    className="flex items-center gap-1 text-indigo-600 hover:text-indigo-700 text-xs font-bold transition-all px-2.5 py-1 rounded-md hover:bg-indigo-50 cursor-pointer shrink-0"
-                                    title="Unlock course to access this lesson"
-                                  >
-                                    <Lock className="w-3 h-3" /> Unlock
-                                  </button>
-                                ) : isSequentialLocked ? (
-                                  <div
-                                    className="flex items-center gap-1 text-slate-400 text-xs font-semibold px-2.5 py-1 rounded-md select-none cursor-not-allowed shrink-0"
-                                    title="Complete the previous lesson to unlock this lesson"
-                                  >
-                                    <Lock className="w-3 h-3 text-slate-400" /> Locked
-                                  </div>
-                                ) : (
-                                  <Link
-                                    href={lessonHref}
-                                    className="flex items-center gap-1 text-indigo-600 hover:text-indigo-700 text-xs font-bold transition-all px-2.5 py-1 rounded-md hover:bg-indigo-50 shrink-0"
-                                  >
-                                    {isInstructor ? "Start Lesson" : (isPreview ? "Preview" : (isLessonCompleted ? "Review" : "Start"))} <ChevronRight className="w-3 h-3" />
-                                  </Link>
-                                )}
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      ) : (
-                        <p className="text-xs text-slate-400 py-3 italic">No lessons in this chapter.</p>
-                      )}
-
-                      {/* Add Lesson UI */}
-                      {canManageCourse && (
-                        <div className="mt-3 mb-2 flex items-center justify-between">
-                          <Link
-                            href={`/course/${courseId}/${encodeURIComponent(chapter.name)}/create-lesson`}
-                            className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 transition-colors bg-indigo-50/60 px-2.5 py-1.5 rounded-lg border border-indigo-100/60"
-                          >
-                            <Plus className="w-3.5 h-3.5" /> Add Lesson to Chapter
-                          </Link>
-                        </div>
-                      )}
+                        {/* Add Lesson UI */}
+                        {canManageCourse && (
+                          <div className="mt-3 mb-2 flex items-center justify-between">
+                            <Link
+                              href={`/course/${courseId}/${encodeURIComponent(chapter.name)}/create-lesson`}
+                              className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 transition-colors bg-indigo-50/60 px-2.5 py-1.5 rounded-lg border border-indigo-100/60"
+                            >
+                              <Plus className="w-3.5 h-3.5" /> Add Lesson to Chapter
+                            </Link>
+                          </div>
+                        )}
+                      </div>
                     </div>
+                  );
+                })}
+
+                {/* Chapters Pagination */}
+                {outline.length > CHAPTERS_PER_PAGE && (
+                  <div className="pt-2">
+                    <Pagination
+                      currentPage={chapterPage}
+                      totalPages={totalChapterPages}
+                      onPageChange={(page) => {
+                        setChapterPage(page);
+                        const el = document.getElementById("curriculum");
+                        if (el) el.scrollIntoView({ behavior: "smooth" });
+                      }}
+                      totalItems={outline.length}
+                      pageSize={CHAPTERS_PER_PAGE}
+                      itemName="chapters"
+                      hideOnSinglePage={true}
+                    />
                   </div>
-                ))}
+                )}
               </div>
             ) : (
               <div className="text-center py-8 bg-slate-50 rounded-lg border border-dashed border-slate-200">

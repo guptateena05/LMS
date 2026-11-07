@@ -944,29 +944,34 @@ export default function LessonPage() {
         const rawLe = lessonsRes.status === 'fulfilled' ? lessonsRes.value : [];
         const leArray: any[] = Array.isArray(rawLe) ? rawLe : (rawLe?.message?.data || rawLe?.data || rawLe?.message || []);
 
-        const hasLessons = (arr: any[]) => Array.isArray(arr) && arr.some((ch: any) => Array.isArray(ch?.lessons) && ch.lessons.length > 0);
-
         let baseChapters: any[] = [];
-        if (hasLessons(enrollChaptersList)) {
-          baseChapters = enrollChaptersList;
-        } else if (hasLessons(courseChaptersList)) {
-          baseChapters = courseChaptersList;
-        } else if (hasLessons(outlineChaptersList)) {
-          baseChapters = outlineChaptersList;
-        } else if (enrollChaptersList.length > 0) {
-          baseChapters = enrollChaptersList;
-        } else if (courseChaptersList.length > 0) {
-          baseChapters = courseChaptersList;
+        if (courseChaptersList.length > 0) {
+          baseChapters = [...courseChaptersList];
         } else if (outlineChaptersList.length > 0) {
-          baseChapters = outlineChaptersList;
+          baseChapters = [...outlineChaptersList];
+        } else if (enrollChaptersList.length > 0) {
+          baseChapters = [...enrollChaptersList];
         } else {
-          baseChapters = listChapters;
+          baseChapters = [...listChapters];
         }
 
-        // Sort chapters consistently using sequence numbers, creation timestamp, and title numbering
-        const sortedChArray = [...baseChapters].sort(compareCurriculumItems);
+        // Also append any missing chapters from other sources if any
+        for (const otherCh of [...enrollChaptersList, ...outlineChaptersList, ...listChapters]) {
+          if (!otherCh) continue;
+          const oName = String(otherCh.name || otherCh.title || '').trim().toLowerCase();
+          const exists = baseChapters.some(c => {
+            const cName = String(c.name || c.title || '').trim().toLowerCase();
+            return cName === oName;
+          });
+          if (!exists) {
+            baseChapters.push(otherCh);
+          }
+        }
 
-        const allSourceChapters = [...enrollChaptersList, ...courseChaptersList, ...outlineChaptersList];
+        // Strictly maintain the sequence as per in the API response
+        const sortedChArray = baseChapters;
+
+        const allSourceChapters = [...courseChaptersList, ...enrollChaptersList, ...outlineChaptersList];
 
         const mapped = sortedChArray.map((c: any) => {
           let chLessons: any[] = Array.isArray(c.lessons) && c.lessons.length > 0 ? c.lessons : [];
@@ -994,8 +999,8 @@ export default function LessonPage() {
             });
           }
 
-          // Sort lessons inside this chapter consistently by sequence, creation timestamp, and title numbering
-          const sortedChLessons = [...chLessons].sort(compareCurriculumItems);
+          // Strictly maintain lesson sequence as per in the API response
+          const sortedChLessons = chLessons;
 
           return {
             ...c,

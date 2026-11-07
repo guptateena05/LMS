@@ -8,7 +8,9 @@
  */
 export const extractSequenceNumber = (item: any): number | null => {
   if (!item || typeof item !== 'object') return null;
-  const sequenceKeys = ['idx', 'sequence_no', 'sequence', 'order', 'step', 'sort_order', 'lesson_order', 'chapter_order'];
+  // NOTE: 'idx' is Frappe's internal database row index which defaults to 1 on all new records,
+  // so we do not use 'idx' as curriculum sequence to prevent newly created chapters/lessons jumping out of order.
+  const sequenceKeys = ['sequence_no', 'sequence', 'order', 'step', 'sort_order', 'lesson_order', 'chapter_order'];
   for (const key of sequenceKeys) {
     const val = item[key];
     if (val !== undefined && val !== null && val !== '') {
@@ -65,7 +67,16 @@ export const compareCurriculumItems = (a: any, b: any): number => {
   if (seqA !== null && seqB === null) return -1;
   if (seqA === null && seqB !== null) return 1;
 
-  // 2. Creation timestamp (ascending: created first comes first)
+  // 2. Both items have title-extracted numbering (e.g. Chapter 1 vs Chapter 2, Lesson 1 vs Lesson 2)
+  const titleA = a.title || a.chapter_name || a.lesson_name || a.name || '';
+  const titleB = b.title || b.chapter_name || b.lesson_name || b.name || '';
+  const numA = extractTitleNumber(titleA);
+  const numB = extractTitleNumber(titleB);
+  if (numA !== null && numB !== null && numA !== numB) {
+    return numA - numB;
+  }
+
+  // 3. Creation timestamp (ascending: created earlier comes first, matching course creation sequence)
   if (a.creation && b.creation) {
     const timeA = new Date(a.creation).getTime();
     const timeB = new Date(b.creation).getTime();
@@ -74,17 +85,10 @@ export const compareCurriculumItems = (a: any, b: any): number => {
     }
   }
 
-  // 3. Title-extracted numbering (e.g. Chapter 1 vs Chapter 2)
-  const titleA = a.title || a.chapter_name || a.lesson_name || a.name || '';
-  const titleB = b.title || b.chapter_name || b.lesson_name || b.name || '';
-  const numA = extractTitleNumber(titleA);
-  const numB = extractTitleNumber(titleB);
-  if (numA !== null && numB !== null && numA !== numB) {
-    return numA - numB;
-  }
+  // 4. If only one has title-extracted numbering, numbered item comes first
   if (numA !== null && numB === null) return -1;
   if (numA === null && numB !== null) return 1;
 
-  // 4. Preserve original syllabus order if no explicit sequence, creation date, or numbered title exists
+  // 5. Preserve original syllabus order if no explicit sequence, creation date, or numbered title exists
   return 0;
 };

@@ -1,5 +1,6 @@
 import { apiService, API_TOKEN, API_METHOD_PREFIX, uploadFile, BASE_URL, getCurrentUserEmail } from "./api.services";
 import { isAuthorizedInstructor, isCourseInstructorOrOwner, isBatchInstructorOrOwner, isProgramInstructorOrOwner } from "./auth.services";
+import { compareCurriculumItems } from "@/utils/curriculum";
 
 // Define interfaces if needed, or use any/generic for now
 export interface GetCourseDetailsPayload {
