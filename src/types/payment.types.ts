@@ -30,6 +30,8 @@ export interface CheckoutSummary {
   total_amount_formatted: string;
   is_free: boolean;
   coupon?: string | null;
+  available_coupons?: Array<Record<string, any>>;
+  coupons?: Array<Record<string, any>>;
   saved_address?: Record<string, any> | null;
   image?: string | null;
   description?: string | null;

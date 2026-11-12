@@ -18,7 +18,9 @@ import {
   Sparkles,
   BookOpen,
   Users,
-  Award
+  Award,
+  Ticket,
+  Calendar
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import {
@@ -27,6 +29,11 @@ import {
   initiatePayment,
   verifyPayment
 } from "@/services/payment.services";
+import {
+  getLMSCouponList,
+  getCouponRedeemedCount,
+  LMSCoupon
+} from "@/services/lms.services";
 import {
   ItemType,
   CheckoutAddress,
@@ -60,6 +67,74 @@ const safeErrorMessage = (err: any, fallback: string): string => {
     }
   }
   return fallback;
+};
+
+const formatCouponDate = (dateStr?: string | null): string => {
+  if (!dateStr) return "";
+  const match = String(dateStr).trim().match(/^(\d{4})[-/](\d{2})[-/](\d{2})/);
+  if (match) {
+    return `${match[3]}-${match[2]}-${match[1]}`;
+  }
+  return String(dateStr);
+};
+
+const formatCouponDiscountLabel = (coupon: LMSCoupon, currency = "INR"): string => {
+  if (coupon.discount_type === "Percentage" || (coupon.percentage_discount && !coupon.amount)) {
+    return `${Number(coupon.percentage_discount || 0)}% OFF`;
+  }
+  const symbol = currency === "USD" ? "$" : "₹";
+  return `${symbol} ${Number(coupon.amount || 0).toLocaleString("en-IN")} OFF`;
+};
+
+const isCouponActiveAndApplicable = (
+  coupon: LMSCoupon,
+  itemType: ItemType,
+  itemId: string,
+  itemTitle?: string
+): boolean => {
+  if (!coupon || !coupon.code) return false;
+  if (coupon.enabled !== undefined && Number(coupon.enabled) === 0) return false;
+
+  if (coupon.expires_on) {
+    const today = new Date().toISOString().slice(0, 10);
+    const expiry = String(coupon.expires_on).trim().slice(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(expiry) && expiry < today) {
+      return false;
+    }
+  }
+
+  const limit = Number(coupon.usage_limit || 0);
+  if (limit > 0 && getCouponRedeemedCount(coupon) >= limit) {
+    return false;
+  }
+
+  const items = Array.isArray(coupon.applicable_items)
+    ? coupon.applicable_items
+    : Array.isArray((coupon as any).items)
+    ? (coupon as any).items
+    : [];
+
+  // Universal coupon (no specific items restricted)
+  if (items.length === 0) return true;
+
+  const expectedDoctype = itemType === "batch" ? "lms batch" : "lms course";
+  const normalizedId = decodeURIComponent(itemId || "").trim().toLowerCase();
+  const normalizedTitle = (itemTitle || "").trim().toLowerCase();
+
+  return items.some((entry: any) => {
+    if (typeof entry === "string") {
+      const val = entry.trim().toLowerCase();
+      return val === normalizedId || (normalizedTitle && val === normalizedTitle);
+    }
+    const refDoctype = String(entry.reference_doctype || entry.doctype || "").trim().toLowerCase();
+    if (refDoctype && refDoctype !== "lms coupon item" && refDoctype !== expectedDoctype) {
+      return false;
+    }
+    const candidates = [entry.reference_name, entry.item, entry.course, entry.batch, entry.name]
+      .filter(Boolean)
+      .map((v: any) => String(v).trim().toLowerCase());
+    return candidates.some((c: string) => c === normalizedId || (normalizedTitle && c === normalizedTitle));
+  });
 };
 
 function CheckoutContent() {
@@ -98,6 +173,8 @@ function CheckoutContent() {
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponError, setCouponError] = useState<string | null>(null);
   const [couponSuccessMsg, setCouponSuccessMsg] = useState<string | null>(null);
+  const [availableCoupons, setAvailableCoupons] = useState<LMSCoupon[]>([]);
+  const [loadingCoupons, setLoadingCoupons] = useState(false);
 
   // Payment execution state
   const [isProcessing, setIsProcessing] = useState(false);
@@ -161,9 +238,44 @@ function CheckoutContent() {
           }));
         }
 
+        // Dynamically load available coupons for this course/batch
+        let loadedValidCoupons: LMSCoupon[] = [];
+        const summaryCoupons = Array.isArray(data.available_coupons)
+          ? data.available_coupons
+          : Array.isArray(data.coupons)
+          ? data.coupons
+          : null;
+
+        if (summaryCoupons && summaryCoupons.length > 0) {
+          loadedValidCoupons = (summaryCoupons as LMSCoupon[]).filter((c) =>
+            isCouponActiveAndApplicable(c, itemTypeParam, itemIdParam, data.title)
+          );
+          setAvailableCoupons(loadedValidCoupons);
+        } else {
+          setLoadingCoupons(true);
+          try {
+            const allCoupons = await getLMSCouponList();
+            loadedValidCoupons = (allCoupons || []).filter((c) =>
+              isCouponActiveAndApplicable(c, itemTypeParam, itemIdParam, data.title)
+            );
+            setAvailableCoupons(loadedValidCoupons);
+          } catch {
+            // Non-blocking: student may still enter a coupon code manually if list endpoint is restricted
+            setAvailableCoupons([]);
+          } finally {
+            setLoadingCoupons(false);
+          }
+        }
+
         if (data.coupon) {
-          setAppliedCoupon(data.coupon);
-          setCouponInput(data.coupon);
+          const matchedCoupon = loadedValidCoupons.find(
+            (c) =>
+              c.code?.trim().toUpperCase() === String(data.coupon).trim().toUpperCase() ||
+              c.name?.trim().toUpperCase() === String(data.coupon).trim().toUpperCase()
+          );
+          const resolvedCode = matchedCoupon?.code || data.coupon;
+          setAppliedCoupon(resolvedCode);
+          setCouponInput(resolvedCode);
         }
       } catch (err: any) {
         console.error("Error loading checkout summary:", err);
@@ -197,10 +309,9 @@ function CheckoutContent() {
     }
   };
 
-  // Live Coupon Validation
-  const handleApplyCoupon = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const code = couponInput.trim();
+  // Live Coupon Validation (shared by checkbox selection & manual input)
+  const applyCouponCode = async (rawCode: string) => {
+    const code = rawCode.trim();
     if (!code) {
       setCouponError("Please enter a coupon code");
       return;
@@ -217,6 +328,10 @@ function CheckoutContent() {
         coupon_code: code,
       });
 
+      // validate_coupon_for_item may return the Frappe doc ID in `res.coupon` (e.g. "qn12hvf2d5");
+      // keep the actual coupon code (e.g. "BMJ0XLUEY4") for display and initiate_payment/verify_payment.
+      const appliedCode = (typeof res.coupon_code === "string" && res.coupon_code.trim()) ? res.coupon_code.trim() : code;
+
       // Update summary amounts with validated coupon response
       if (summary) {
         const disc = Number(res.discount_amount || 0);
@@ -230,7 +345,7 @@ function CheckoutContent() {
 
         setSummary({
           ...summary,
-          coupon: res.coupon || code,
+          coupon: appliedCode,
           original_amount: orig,
           original_amount_formatted: res.original_amount_formatted || `₹ ${orig.toLocaleString("en-IN")}`,
           discount_amount: disc,
@@ -243,15 +358,20 @@ function CheckoutContent() {
         });
       }
 
-      setAppliedCoupon(code);
-      setCouponSuccessMsg(`Coupon "${code}" applied successfully!`);
+      setAppliedCoupon(appliedCode);
+      setCouponInput(appliedCode);
+      setCouponSuccessMsg(`Coupon "${appliedCode}" applied successfully!`);
     } catch (err: any) {
       console.error("Coupon validation error:", err);
-      const errMsg = err.response?.data?.message || err.message || "Invalid coupon code";
-      setCouponError(typeof errMsg === "string" ? errMsg : "Invalid coupon code");
+      setCouponError(safeErrorMessage(err, "Invalid coupon code"));
     } finally {
       setCouponLoading(false);
     }
+  };
+
+  const handleApplyCoupon = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    await applyCouponCode(couponInput);
   };
 
   // Remove coupon handler
@@ -824,18 +944,118 @@ function CheckoutContent() {
                 </div>
 
                 {/* Coupon Validation Input Section */}
-                <div className="py-5 border-b border-slate-100">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2 flex items-center gap-1.5">
-                    <Tag className="w-3.5 h-3.5 text-indigo-600" />
-                    Discount Coupon
-                  </label>
+                <div className="py-5 border-b border-slate-100 space-y-3.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                      <Tag className="w-3.5 h-3.5 text-indigo-600" />
+                      Discount Coupon
+                    </label>
+                    {availableCoupons.length > 0 && (
+                      <span className="text-[11px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">
+                        {availableCoupons.length} {availableCoupons.length === 1 ? "coupon" : "coupons"} available
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Available Instructor Coupons List (Checkbox to Apply/Remove) */}
+                  {loadingCoupons ? (
+                    <div className="flex items-center gap-2 text-xs text-slate-400 py-1">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-500" />
+                      <span>Checking available coupons...</span>
+                    </div>
+                  ) : availableCoupons.length > 0 ? (
+                    <div className="space-y-2 max-h-52 overflow-y-auto pr-0.5">
+                      {availableCoupons.map((coupon) => {
+                        const isChecked =
+                          Boolean(appliedCoupon) &&
+                          appliedCoupon!.trim().toUpperCase() === coupon.code.trim().toUpperCase();
+                        const limit = Number(coupon.usage_limit || 0);
+                        const redeemed = getCouponRedeemedCount(coupon);
+                        const remaining = limit > 0 ? Math.max(0, limit - redeemed) : null;
+                        const discountBadge = formatCouponDiscountLabel(coupon, summary.currency);
+                        const itemsArr = Array.isArray(coupon.applicable_items) ? coupon.applicable_items : [];
+
+                        return (
+                          <label
+                            key={coupon.name || coupon.code}
+                            className={`flex items-start gap-3 p-3 rounded-xl border transition-all cursor-pointer select-none ${
+                              couponLoading ? "opacity-60 pointer-events-none" : ""
+                            } ${
+                              isChecked
+                                ? "bg-emerald-50/80 border-emerald-300 ring-1 ring-emerald-200"
+                                : "bg-indigo-50/40 border-indigo-100 hover:border-indigo-300 hover:bg-indigo-50/70"
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              disabled={couponLoading}
+                              onChange={() => {
+                                if (isChecked) {
+                                  handleRemoveCoupon();
+                                } else {
+                                  applyCouponCode(coupon.code);
+                                }
+                              }}
+                              className="mt-1 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer shrink-0"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  <Ticket className={`w-3.5 h-3.5 shrink-0 ${isChecked ? "text-emerald-600" : "text-indigo-600"}`} />
+                                  <span className="font-mono font-extrabold text-xs tracking-wider text-slate-900 truncate">
+                                    {coupon.code}
+                                  </span>
+                                </div>
+                                <span
+                                  className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wide shrink-0 ${
+                                    isChecked
+                                      ? "bg-emerald-600 text-white"
+                                      : "bg-indigo-600 text-white"
+                                  }`}
+                                >
+                                  {discountBadge}
+                                </span>
+                              </div>
+
+                              <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500">
+                                <span>
+                                  {coupon.discount_type === "Percentage"
+                                    ? `${Number(coupon.percentage_discount || 0)}% off course price`
+                                    : `Flat ${discountBadge.replace(" OFF", "")} discount`}
+                                </span>
+                                {coupon.expires_on && (
+                                  <span className="inline-flex items-center gap-1 text-slate-500">
+                                    <Calendar className="w-3 h-3 text-slate-400" />
+                                    Valid till {formatCouponDate(coupon.expires_on)}
+                                  </span>
+                                )}
+                                {remaining !== null && (
+                                  <span className="text-amber-700 font-medium">
+                                    {remaining} {remaining === 1 ? "use" : "uses"} left
+                                  </span>
+                                )}
+                                {itemsArr.length === 0 && (
+                                  <span className="text-indigo-600 font-medium">All courses</span>
+                                )}
+                              </div>
+
+                              <p className={`mt-1 text-[11px] font-semibold ${isChecked ? "text-emerald-700" : "text-indigo-600"}`}>
+                                {isChecked ? "Applied — click to remove discount" : "Check to apply this coupon"}
+                              </p>
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  ) : null}
 
                   {appliedCoupon ? (
                     <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 px-3.5 py-2.5 rounded-xl">
-                      <div className="flex items-center gap-2">
-                        <Sparkles className="w-4 h-4 text-emerald-600" />
-                        <div>
-                          <p className="text-xs font-bold text-emerald-800 tracking-wide">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-emerald-800 tracking-wide truncate">
                             {appliedCoupon} <span className="font-semibold text-emerald-600">• Applied</span>
                           </p>
                           <p className="text-[11px] text-emerald-700">
@@ -847,7 +1067,7 @@ function CheckoutContent() {
                         type="button"
                         onClick={handleRemoveCoupon}
                         disabled={couponLoading}
-                        className="text-xs font-bold text-slate-400 hover:text-rose-600 transition-colors px-2 py-1"
+                        className="text-xs font-bold text-slate-400 hover:text-rose-600 transition-colors px-2 py-1 shrink-0 cursor-pointer"
                         title="Remove coupon"
                       >
                         ✕ Remove
@@ -863,13 +1083,13 @@ function CheckoutContent() {
                           setCouponError(null);
                         }}
                         placeholder="Enter coupon code (e.g. SAVE500)"
-                        className="flex-1 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 text-slate-900 text-xs font-medium uppercase tracking-wider focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 transition-all"
+                        className="flex-1 min-w-0 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 text-slate-900 text-xs font-medium uppercase tracking-wider focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 transition-all"
                       />
                       <button
                         type="button"
                         onClick={handleApplyCoupon}
                         disabled={couponLoading || !couponInput.trim()}
-                        className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-all disabled:opacity-50 flex items-center gap-1.5 shadow-sm"
+                        className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-all disabled:opacity-50 flex items-center gap-1.5 shadow-sm shrink-0 cursor-pointer"
                       >
                         {couponLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Apply"}
                       </button>
