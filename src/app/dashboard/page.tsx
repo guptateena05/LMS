@@ -946,9 +946,9 @@ export function DashboardContent() {
             </div>
 
             {/* Quick Actions / Creator Shortcuts Row */}
-            <div className="bg-white rounded-2xl border border-slate-200/80 p-4 mb-8 flex flex-wrap items-center justify-between gap-4 shadow-sm">
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Creator Shortcuts:</span>
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-3.5 sm:p-4 mb-8 flex flex-col sm:flex-row sm:flex-wrap sm:items-center justify-between gap-3 sm:gap-4 shadow-sm">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider w-full sm:w-auto">Creator Shortcuts:</span>
                 <Link
                   href="/course/create"
                   className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors flex items-center gap-1.5"
@@ -1181,119 +1181,121 @@ export function DashboardContent() {
               </div>
 
               {/* Interactive Chart Body */}
-              <div className="p-6 sm:p-8">
-                <div className="relative">
-                  {/* Y-Axis Gridlines & Reference Labels */}
-                  <div className="h-64 sm:h-72 w-full relative flex flex-col justify-between pointer-events-none pb-8 pr-2">
-                    {[1, 0.75, 0.5, 0.25, 0].map((ratio) => {
-                      const val = Math.round(maxMonthlyRevenue * ratio);
-                      return (
-                        <div key={ratio} className="w-full flex items-center gap-3">
-                          <span className="text-[11px] font-bold text-slate-400 w-12 text-right shrink-0">
-                            {formatTick(val)}
-                          </span>
-                          <div className="w-full border-b border-slate-100"></div>
-                        </div>
-                      );
-                    })}
-                  </div>
+              <div className="p-4 sm:p-6 md:p-8">
+                <div className="overflow-x-auto pb-2">
+                  <div className="relative min-w-[480px] sm:min-w-0">
+                    {/* Y-Axis Gridlines & Reference Labels */}
+                    <div className="h-64 sm:h-72 w-full relative flex flex-col justify-between pointer-events-none pb-8 pr-2">
+                      {[1, 0.75, 0.5, 0.25, 0].map((ratio) => {
+                        const val = Math.round(maxMonthlyRevenue * ratio);
+                        return (
+                          <div key={ratio} className="w-full flex items-center gap-3">
+                            <span className="text-[11px] font-bold text-slate-400 w-12 text-right shrink-0">
+                              {formatTick(val)}
+                            </span>
+                            <div className="w-full border-b border-slate-100"></div>
+                          </div>
+                        );
+                      })}
+                    </div>
 
-                  {/* Bar Columns Container (Absolute over gridlines) */}
-                  <div className="absolute inset-0 pl-16 pb-8 flex items-end justify-between gap-1 sm:gap-2">
-                    {monthlyData.map((m, idx) => {
-                      const isCurrent = idx === currentMonthIdx;
-                      const rev = Number(m.gross_revenue || 0);
-                      const heightPercent = maxMonthlyRevenue > 0 ? (rev / maxMonthlyRevenue) * 100 : 0;
-                      const isHovered = hoveredMonth?.month_key === m.month_key;
-                      const isSelected = selectedMonth?.month_key === m.month_key;
+                    {/* Bar Columns Container (Absolute over gridlines) */}
+                    <div className="absolute inset-0 pl-16 pb-8 flex items-end justify-between gap-1 sm:gap-2">
+                      {monthlyData.map((m, idx) => {
+                        const isCurrent = idx === currentMonthIdx;
+                        const rev = Number(m.gross_revenue || 0);
+                        const heightPercent = maxMonthlyRevenue > 0 ? (rev / maxMonthlyRevenue) * 100 : 0;
+                        const isHovered = hoveredMonth?.month_key === m.month_key;
+                        const isSelected = selectedMonth?.month_key === m.month_key;
 
-                      return (
-                        <div
-                          key={m.month_key}
-                          onMouseEnter={() => setHoveredMonth(m)}
-                          onMouseLeave={() => setHoveredMonth(null)}
-                          onClick={() => setSelectedMonth(isSelected ? null : m)}
-                          className="relative flex-1 h-full flex flex-col items-center justify-end group cursor-pointer"
-                        >
-                          {/* Floating Tooltip */}
-                          {isHovered && (
-                            <div className="absolute bottom-full mb-3 z-30 pointer-events-none animate-in fade-in duration-200">
-                              <div className="bg-slate-900 text-white rounded-xl shadow-xl px-3 py-2 text-xs w-44 border border-slate-700">
-                                <p className="font-bold text-slate-200 border-b border-slate-800 pb-1 mb-1.5 flex items-center justify-between">
-                                  <span>{m.month_label}</span>
-                                  {isCurrent && (
-                                    <span className="text-[9px] bg-indigo-500/30 text-indigo-300 px-1.5 py-0.5 rounded font-semibold">
-                                      Current
-                                    </span>
-                                  )}
-                                </p>
-                                <p className="text-emerald-400 font-extrabold text-sm mb-1">
-                                  ₹ {rev.toLocaleString("en-IN")}
-                                </p>
-                                <div className="text-[10px] text-slate-400 space-y-0.5">
-                                  <div className="flex justify-between">
-                                    <span>Total Orders:</span>
-                                    <span className="font-semibold text-slate-200">{m.sales_count}</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span>Courses:</span>
-                                    <span className="font-semibold text-slate-200">{m.courses_sold}</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span>Batches:</span>
-                                    <span className="font-semibold text-slate-200">{m.batches_sold}</span>
+                        return (
+                          <div
+                            key={m.month_key}
+                            onMouseEnter={() => setHoveredMonth(m)}
+                            onMouseLeave={() => setHoveredMonth(null)}
+                            onClick={() => setSelectedMonth(isSelected ? null : m)}
+                            className="relative flex-1 h-full flex flex-col items-center justify-end group cursor-pointer"
+                          >
+                            {/* Floating Tooltip */}
+                            {isHovered && (
+                              <div className="absolute bottom-full mb-3 z-30 pointer-events-none animate-in fade-in duration-200">
+                                <div className="bg-slate-900 text-white rounded-xl shadow-xl px-3 py-2 text-xs w-44 border border-slate-700">
+                                  <p className="font-bold text-slate-200 border-b border-slate-800 pb-1 mb-1.5 flex items-center justify-between">
+                                    <span>{m.month_label}</span>
+                                    {isCurrent && (
+                                      <span className="text-[9px] bg-indigo-500/30 text-indigo-300 px-1.5 py-0.5 rounded font-semibold">
+                                        Current
+                                      </span>
+                                    )}
+                                  </p>
+                                  <p className="text-emerald-400 font-extrabold text-sm mb-1">
+                                    ₹ {rev.toLocaleString("en-IN")}
+                                  </p>
+                                  <div className="text-[10px] text-slate-400 space-y-0.5">
+                                    <div className="flex justify-between">
+                                      <span>Total Orders:</span>
+                                      <span className="font-semibold text-slate-200">{m.sales_count}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span>Courses:</span>
+                                      <span className="font-semibold text-slate-200">{m.courses_sold}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span>Batches:</span>
+                                      <span className="font-semibold text-slate-200">{m.batches_sold}</span>
+                                    </div>
                                   </div>
                                 </div>
+                                {/* Tooltip Arrow */}
+                                <div className="w-2.5 h-2.5 bg-slate-900 rotate-45 mx-auto -mt-1 border-r border-b border-slate-700"></div>
                               </div>
-                              {/* Tooltip Arrow */}
-                              <div className="w-2.5 h-2.5 bg-slate-900 rotate-45 mx-auto -mt-1 border-r border-b border-slate-700"></div>
-                            </div>
-                          )}
+                            )}
 
-                          {/* Bar Column Track */}
-                          <div className="w-full max-w-[42px] h-full flex items-end justify-center rounded-xl transition-all">
-                            {/* The Filled Bar */}
-                            <div
-                              style={{
-                                height: rev > 0 ? `${Math.max(heightPercent, 6)}%` : "4px",
-                              }}
-                              className={`w-full max-w-[36px] rounded-t-lg transition-all duration-300 relative ${rev > 0
-                                  ? isHovered || isSelected
-                                    ? "bg-gradient-to-t from-indigo-700 via-indigo-600 to-emerald-400 shadow-lg shadow-indigo-500/30 ring-2 ring-indigo-400 scale-[1.03]"
-                                    : "bg-gradient-to-t from-indigo-600 to-emerald-500 opacity-90 group-hover:opacity-100"
-                                  : isHovered || isSelected
-                                    ? "bg-slate-300"
-                                    : "bg-slate-200/80"
-                                }`}
-                            >
-                              {/* Top value indicator on hover */}
-                              {rev > 0 && (
-                                <div className="absolute -top-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-black text-slate-700 whitespace-nowrap pointer-events-none">
-                                  {formatTick(rev)}
-                                </div>
+                            {/* Bar Column Track */}
+                            <div className="w-full max-w-[42px] h-full flex items-end justify-center rounded-xl transition-all">
+                              {/* The Filled Bar */}
+                              <div
+                                style={{
+                                  height: rev > 0 ? `${Math.max(heightPercent, 6)}%` : "4px",
+                                }}
+                                className={`w-full max-w-[36px] rounded-t-lg transition-all duration-300 relative ${rev > 0
+                                    ? isHovered || isSelected
+                                      ? "bg-gradient-to-t from-indigo-700 via-indigo-600 to-emerald-400 shadow-lg shadow-indigo-500/30 ring-2 ring-indigo-400 scale-[1.03]"
+                                      : "bg-gradient-to-t from-indigo-600 to-emerald-500 opacity-90 group-hover:opacity-100"
+                                    : isHovered || isSelected
+                                      ? "bg-slate-300"
+                                      : "bg-slate-200/80"
+                                  }`}
+                              >
+                                {/* Top value indicator on hover */}
+                                {rev > 0 && (
+                                  <div className="absolute -top-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-black text-slate-700 whitespace-nowrap pointer-events-none">
+                                    {formatTick(rev)}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Month Label */}
+                            <div className="absolute -bottom-7 flex flex-col items-center">
+                              <span
+                                className={`text-[11px] sm:text-xs font-semibold tracking-tight transition-colors ${isSelected
+                                    ? "text-indigo-600 font-extrabold"
+                                    : isCurrent
+                                      ? "text-slate-900 font-bold"
+                                      : "text-slate-500 group-hover:text-slate-900"
+                                  }`}
+                              >
+                                {m.month_label.split(" ")[0]}
+                              </span>
+                              {isCurrent && (
+                                <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 mt-0.5"></span>
                               )}
                             </div>
                           </div>
-
-                          {/* Month Label */}
-                          <div className="absolute -bottom-7 flex flex-col items-center">
-                            <span
-                              className={`text-[11px] sm:text-xs font-semibold tracking-tight transition-colors ${isSelected
-                                  ? "text-indigo-600 font-extrabold"
-                                  : isCurrent
-                                    ? "text-slate-900 font-bold"
-                                    : "text-slate-500 group-hover:text-slate-900"
-                                }`}
-                            >
-                              {m.month_label.split(" ")[0]}
-                            </span>
-                            {isCurrent && (
-                              <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 mt-0.5"></span>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
 
@@ -1343,7 +1345,7 @@ export function DashboardContent() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-6 text-xs text-slate-700">
+                    <div className="flex flex-wrap items-center justify-between sm:justify-end gap-4 sm:gap-6 text-xs text-slate-700 w-full sm:w-auto">
                       <div>
                         <span className="text-[10px] font-bold text-slate-400 uppercase block">Units Sold</span>
                         <span className="font-bold text-slate-900">{selectedMonth.sales_count} orders</span>
@@ -1674,10 +1676,10 @@ export function DashboardContent() {
               </div>
 
               {/* ── RIGHT (40% / col-span-5): STUDENT ENROLLMENT VELOCITY (AREA TREND) ── */}
-              <div className="lg:col-span-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6 sm:p-7 flex flex-col justify-between">
+              <div className="lg:col-span-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm p-5 sm:p-7 flex flex-col justify-between">
                 <div>
                   {/* Velocity Header */}
-                  <div className="flex items-center justify-between pb-5 border-b border-slate-100">
+                  <div className="flex flex-wrap items-center justify-between gap-2 pb-5 border-b border-slate-100">
                     <div>
                       <div className="flex items-center gap-2 mb-1">
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-sky-500/15 text-sky-700 border border-sky-500/25">
@@ -1709,7 +1711,7 @@ export function DashboardContent() {
                   </div>
 
                   {/* Summary Metric Strip */}
-                  <div className="grid grid-cols-3 gap-2 py-4 my-2 bg-slate-50/70 rounded-2xl border border-slate-100 px-3 text-center">
+                  <div className="grid grid-cols-3 gap-1.5 sm:gap-2 py-3 sm:py-4 my-2 bg-slate-50/70 rounded-2xl border border-slate-100 px-2 sm:px-3 text-center">
                     <div>
                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                         New This Year
@@ -1737,7 +1739,8 @@ export function DashboardContent() {
                   </div>
 
                   {/* SVG Area Line Trend Chart */}
-                  <div className="relative mt-4 pt-4">
+                  <div className="overflow-x-auto pb-1">
+                    <div className="relative mt-4 pt-4 min-w-[340px] sm:min-w-0">
                     {/* Floating Hover Tooltip */}
                     {hoveredVelocityPoint && (
                       <div
@@ -1846,10 +1849,11 @@ export function DashboardContent() {
                       ))}
                     </div>
                   </div>
+                  </div>
                 </div>
 
                 {/* Card Footer */}
-                <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                <div className="pt-4 mt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
                   <span className="flex items-center gap-1.5 text-[11px]">
                     <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
                     Steady subscriber acquisition
@@ -1871,43 +1875,43 @@ export function DashboardContent() {
           ══════════════════════════════════════════════════════ */
           <div>
             {/* 4 Student Metric Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 mb-8">
-              <div className="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-slate-200/80 flex items-center gap-4 hover:border-indigo-200 transition-all">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+              <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200/80 flex items-center gap-4 hover:border-indigo-200 transition-all">
                 <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 shrink-0">
                   <BookOpen className="w-6 h-6" />
                 </div>
-                <div>
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Enrolled Courses</p>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider truncate">Enrolled Courses</p>
                   <p className="text-2xl font-extrabold text-slate-900 mt-0.5">{sStats.enrolled_courses}</p>
                 </div>
               </div>
 
-              <div className="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-slate-200/80 flex items-center gap-4 hover:border-emerald-200 transition-all">
+              <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200/80 flex items-center gap-4 hover:border-emerald-200 transition-all">
                 <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600 shrink-0">
                   <Users className="w-6 h-6" />
                 </div>
-                <div>
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Live Batches</p>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider truncate">Live Batches</p>
                   <p className="text-2xl font-extrabold text-slate-900 mt-0.5">{sStats.enrolled_batches}</p>
                 </div>
               </div>
 
-              <div className="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-slate-200/80 flex items-center gap-4 hover:border-purple-200 transition-all">
+              <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200/80 flex items-center gap-4 hover:border-purple-200 transition-all">
                 <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center text-purple-600 shrink-0">
                   <CheckCircle2 className="w-6 h-6" />
                 </div>
-                <div>
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Completed</p>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider truncate">Completed</p>
                   <p className="text-2xl font-extrabold text-slate-900 mt-0.5">{sStats.completed_courses}</p>
                 </div>
               </div>
 
-              <div className="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-slate-200/80 flex items-center gap-4 hover:border-amber-200 transition-all">
+              <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200/80 flex items-center gap-4 hover:border-amber-200 transition-all">
                 <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center text-amber-600 shrink-0">
                   <Trophy className="w-6 h-6" />
                 </div>
-                <div>
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Certificates</p>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider truncate">Certificates</p>
                   <p className="text-2xl font-extrabold text-slate-900 mt-0.5">{sStats.certificates_earned}</p>
                 </div>
               </div>
@@ -2047,15 +2051,15 @@ export function DashboardContent() {
             )}
 
             {/* Student Tabs Navigation */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-1 mb-6 flex gap-1 max-w-xl">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-1 mb-6 flex flex-wrap sm:flex-nowrap gap-1 max-w-xl">
               <button
                 onClick={() => setStudentTab("courses")}
-                className={`flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer ${studentTab === "courses"
+                className={`flex-1 min-w-[110px] py-2 sm:py-2.5 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer whitespace-nowrap ${studentTab === "courses"
                   ? "bg-indigo-600 text-white shadow-sm"
                   : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
                   }`}
               >
-                <BookOpen className="w-4 h-4" />
+                <BookOpen className="w-4 h-4 shrink-0" />
                 <span>My Courses</span>
                 <span className={`text-xs px-2 py-0.5 rounded-full ${studentTab === "courses" ? "bg-indigo-500 text-white" : "bg-slate-100 text-slate-600"}`}>
                   {studentCourses.length}
@@ -2064,12 +2068,12 @@ export function DashboardContent() {
 
               <button
                 onClick={() => setStudentTab("batches")}
-                className={`flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer ${studentTab === "batches"
+                className={`flex-1 min-w-[110px] py-2 sm:py-2.5 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer whitespace-nowrap ${studentTab === "batches"
                   ? "bg-indigo-600 text-white shadow-sm"
                   : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
                   }`}
               >
-                <Users className="w-4 h-4" />
+                <Users className="w-4 h-4 shrink-0" />
                 <span>My Batches</span>
                 <span className={`text-xs px-2 py-0.5 rounded-full ${studentTab === "batches" ? "bg-indigo-500 text-white" : "bg-slate-100 text-slate-600"}`}>
                   {studentBatches.length}
@@ -2078,12 +2082,12 @@ export function DashboardContent() {
 
               <button
                 onClick={() => setStudentTab("programs")}
-                className={`flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer ${studentTab === "programs"
+                className={`flex-1 min-w-[125px] py-2 sm:py-2.5 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer whitespace-nowrap ${studentTab === "programs"
                   ? "bg-indigo-600 text-white shadow-sm"
                   : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
                   }`}
               >
-                <Layers className="w-4 h-4" />
+                <Layers className="w-4 h-4 shrink-0" />
                 <span>Learning Paths</span>
                 <span className={`text-xs px-2 py-0.5 rounded-full ${studentTab === "programs" ? "bg-indigo-500 text-white" : "bg-slate-100 text-slate-600"}`}>
                   {studentPrograms.length}

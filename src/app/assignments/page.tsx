@@ -420,7 +420,7 @@ function AssignmentsContent() {
             </div>
 
             {isInstructor && (
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   onClick={() => fetchInstructorSubmissions()}
@@ -443,11 +443,11 @@ function AssignmentsContent() {
 
           {/* Instructor Tabs */}
           {isInstructor && (
-            <div className="flex border-b border-slate-800 mt-6 gap-2">
+            <div className="flex overflow-x-auto border-b border-slate-800 mt-6 gap-2">
               <button
                 type="button"
                 onClick={() => setActiveTab('assignments')}
-                className={`flex items-center gap-2 px-4 py-2.5 font-semibold text-sm border-b-2 transition-all cursor-pointer ${
+                className={`flex items-center gap-2 px-4 py-2.5 font-semibold text-sm border-b-2 transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                   activeTab === 'assignments'
                     ? 'border-indigo-500 text-white font-bold bg-slate-800/60 rounded-t-xl'
                     : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/20 rounded-t-xl'
@@ -465,7 +465,7 @@ function AssignmentsContent() {
               <button
                 type="button"
                 onClick={() => setActiveTab('submissions')}
-                className={`flex items-center gap-2 px-4 py-2.5 font-semibold text-sm border-b-2 transition-all cursor-pointer ${
+                className={`flex items-center gap-2 px-4 py-2.5 font-semibold text-sm border-b-2 transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                   activeTab === 'submissions'
                     ? 'border-indigo-500 text-white font-bold bg-slate-800/60 rounded-t-xl'
                     : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/20 rounded-t-xl'
@@ -510,7 +510,7 @@ function AssignmentsContent() {
               {/* Action Buttons & Search */}
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                 {/* Search */}
-                <div className="relative min-w-[240px] sm:w-64">
+                <div className="relative w-full sm:w-64">
                   <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
@@ -810,7 +810,7 @@ function AssignmentsContent() {
               {/* Search & Status Filters */}
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                 {/* Search */}
-                <div className="relative min-w-[240px] sm:w-64">
+                <div className="relative w-full sm:w-64">
                   <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"

@@ -371,7 +371,7 @@ export default function LiveClassAttendanceModal({
       {toast && (
         <div
           role="alert"
-          className={`fixed top-4 sm:top-5 left-1/2 z-[99999] max-w-md sm:max-w-xl w-auto min-w-[320px] px-4 py-3 rounded-2xl shadow-2xl border flex items-center justify-between gap-3 animate-in fade-in slide-in-from-top-4 duration-200 backdrop-blur-xl ${toast.type === "success"
+          className={`fixed top-4 sm:top-5 left-1/2 z-[99999] max-w-md sm:max-w-xl w-[calc(100vw-2rem)] sm:w-auto sm:min-w-[320px] px-4 py-3 rounded-2xl shadow-2xl border flex items-center justify-between gap-3 animate-in fade-in slide-in-from-top-4 duration-200 backdrop-blur-xl ${toast.type === "success"
               ? "bg-slate-950/95 text-emerald-100 border-emerald-500/50 shadow-emerald-950/50 ring-1 ring-emerald-500/20"
               : toast.type === "error"
                 ? "bg-slate-950/95 text-rose-100 border-rose-500/50 shadow-rose-950/50 ring-1 ring-rose-500/20"
@@ -613,7 +613,7 @@ export default function LiveClassAttendanceModal({
         </div>
 
         {/* ── 3. STUDENT ROSTER TABLE ── */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-auto">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 text-slate-400">
               <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mb-3" />

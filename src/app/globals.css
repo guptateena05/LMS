@@ -37,12 +37,17 @@
   --sidebar-width: 16rem;
 }
 
+html {
+  overflow-x: clip;
+}
+
 body {
   background: #ffffff;
   color: var(--foreground);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: clip;
 }
 
 @media (min-width: 1024px) {

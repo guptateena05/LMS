@@ -141,8 +141,8 @@ export default function BatchesPage() {
           
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
             <h2 className="text-xl font-bold text-slate-900">All Available Batches</h2>
-            <div className="flex items-center gap-3">
-              <div className="relative">
+            <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 w-full sm:w-auto">
+              <div className="relative w-full sm:w-auto">
                 <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
                 <input 
                   type="text" 
@@ -153,11 +153,11 @@ export default function BatchesPage() {
                 />
               </div>
               {isInstructor && (
-                <div className="flex items-center gap-2">
-                  <Link href="/enrollments" className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg text-sm transition-colors shadow-sm whitespace-nowrap">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Link href="/enrollments" className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg text-sm transition-colors shadow-sm whitespace-nowrap flex-1 sm:flex-initial">
                     <Users className="w-4 h-4" /> Enrollments
                   </Link>
-                  <Link href="/batch/create" className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-sm transition-colors shadow-sm whitespace-nowrap">
+                  <Link href="/batch/create" className="flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-sm transition-colors shadow-sm whitespace-nowrap flex-1 sm:flex-initial">
                     <Plus className="w-4 h-4" /> Create
                   </Link>
                 </div>
@@ -205,9 +205,9 @@ export default function BatchesPage() {
                 return (
                 <div key={batch.name || idx} className="relative bg-white border border-slate-200 rounded-xl overflow-hidden hover:shadow-md hover:border-indigo-200 transition-all flex flex-col h-full group">
                   
-                  {/* Actions - Shows on Hover */}
+                  {/* Actions - Always visible on touch, hover on desktop */}
                   {isInstructor && isBatchInstructorOrOwner(batch, userEmail) && (
-                    <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity z-10 flex gap-2">
+                    <div className="absolute top-3 right-3 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity z-10 flex gap-2">
                       <Link 
                         href={`/batch/${batch.name}/edit`}
                         onClick={(e) => e.stopPropagation()}

@@ -1576,14 +1576,14 @@ export default function CourseDetailPage() {
           </section>
 
           {/* Course Outline */}
-          <section id="curriculum" className="bg-white p-6 md:p-8 rounded-xl shadow-sm border border-slate-100">
-            <div className="flex items-center justify-between mb-6">
+          <section id="curriculum" className="bg-white p-4 sm:p-6 md:p-8 rounded-xl shadow-sm border border-slate-100">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
               <h2 className="text-xl font-bold flex items-center gap-2 text-slate-900">
-                <PlayCircle className="w-5 h-5 text-indigo-600" />
+                <PlayCircle className="w-5 h-5 text-indigo-600 shrink-0" />
                 Course Curriculum
               </h2>
               {canManageCourse ? (
-                <div className="flex items-center gap-4">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-4">
                   <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-2.5 py-1 rounded">
                     {outline.length} Chapters
                   </span>
@@ -1604,19 +1604,19 @@ export default function CourseDetailPage() {
             </div>
 
             {isAddingChapter && (
-              <form onSubmit={handleAddChapter} className="mb-6 bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 flex gap-3">
+              <form onSubmit={handleAddChapter} className="mb-6 bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 flex flex-col sm:flex-row gap-3">
                 <input
                   type="text"
                   placeholder="Chapter Title"
                   value={newChapterTitle}
                   onChange={(e) => setNewChapterTitle(e.target.value)}
-                  className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                  className="flex-1 min-w-0 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                   required
                 />
                 <button
                   type="submit"
                   disabled={actionLoading}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 flex items-center gap-2"
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2 shrink-0"
                 >
                   {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Chapter'}
                 </button>

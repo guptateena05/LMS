@@ -135,7 +135,7 @@ function SearchableSelect({
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 top-full mt-1.5 w-full min-w-[240px] bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden py-1 max-h-72 flex flex-col animate-in fade-in-0 zoom-in-95 duration-100">
+        <div className="absolute left-0 top-full mt-1.5 w-full sm:min-w-[240px] bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden py-1 max-h-72 flex flex-col animate-in fade-in-0 zoom-in-95 duration-100">
           <div className="p-2 border-b border-slate-100 bg-slate-50/50">
             <div className="relative">
               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />

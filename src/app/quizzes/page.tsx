@@ -244,7 +244,7 @@ function QuizzesContent() {
           </div>
 
           {isInstructor && (
-            <div className="flex items-center gap-3 shrink-0">
+            <div className="flex flex-wrap items-center gap-3 shrink-0">
               <Link
                 href="/quizzes/create"
                 className="inline-flex items-center px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl shadow-md shadow-indigo-600/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
@@ -264,11 +264,11 @@ function QuizzesContent() {
         </div>
 
         {/* Tab Navigation Navigation */}
-        <div className="max-w-7xl mx-auto mt-8 flex border-b border-slate-800">
+        <div className="max-w-7xl mx-auto mt-8 flex overflow-x-auto border-b border-slate-800">
           <button
             type="button"
             onClick={() => handleTabSwitch("quizzes")}
-            className={`flex items-center gap-2 px-5 py-3 font-semibold text-sm border-b-2 transition-all ${
+            className={`flex items-center gap-2 px-4 sm:px-5 py-3 font-semibold text-sm border-b-2 transition-all whitespace-nowrap shrink-0 ${
               activeTab === "quizzes"
                 ? "border-indigo-500 text-white font-bold bg-slate-800/40 rounded-t-xl"
                 : "border-transparent text-slate-400 hover:text-slate-200"
@@ -287,7 +287,7 @@ function QuizzesContent() {
             <button
               type="button"
               onClick={() => handleTabSwitch("questions")}
-              className={`flex items-center gap-2 px-5 py-3 font-semibold text-sm border-b-2 transition-all ${
+              className={`flex items-center gap-2 px-4 sm:px-5 py-3 font-semibold text-sm border-b-2 transition-all whitespace-nowrap shrink-0 ${
                 activeTab === "questions"
                   ? "border-indigo-500 text-white font-bold bg-slate-800/40 rounded-t-xl"
                   : "border-transparent text-slate-400 hover:text-slate-200"

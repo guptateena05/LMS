@@ -384,7 +384,7 @@ export default function CoursesPage() {
             {/* Filter Pills */}
             <div className="flex flex-wrap items-center gap-2">
               {/* Type Filter */}
-              <div className="flex items-center p-1 bg-slate-100 rounded-xl border border-slate-200/60 text-xs font-semibold">
+              <div className="flex flex-wrap items-center p-1 bg-slate-100 rounded-xl border border-slate-200/60 text-xs font-semibold">
                 {(isInstructor ? instructorFilterOptions : studentFilterOptions).map((filter) => (
                   <button
                     key={filter}

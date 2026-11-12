@@ -306,7 +306,7 @@ export default function CertificateEvaluationsPage() {
         <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs space-y-4">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3.5">
             {/* Search by student name / email */}
-            <div className="relative flex-1 min-w-[220px]">
+            <div className="relative flex-1 w-full sm:min-w-[220px]">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
                 type="text"
@@ -327,9 +327,9 @@ export default function CertificateEvaluationsPage() {
             </div>
 
             {/* Filter Dropdowns: Status, Course, Batch */}
-            <div className="flex flex-wrap items-center gap-2.5">
+            <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
               {/* Status Filter */}
-              <div className="w-[130px] sm:w-[140px]">
+              <div className="w-full sm:w-[140px]">
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
@@ -345,7 +345,7 @@ export default function CertificateEvaluationsPage() {
               </div>
 
               {/* Course Filter (Dropdown master API with doctype LMS Course) */}
-              <div className="w-[180px] sm:w-[200px]">
+              <div className="w-full sm:w-[200px]">
                 <Dropdown
                   id="filter-course"
                   value={courseFilter}
@@ -365,7 +365,7 @@ export default function CertificateEvaluationsPage() {
               </div>
 
               {/* Batch Filter (Dropdown master API with doctype LMS Batch) */}
-              <div className="w-[160px] sm:w-[180px]">
+              <div className="w-full sm:w-[180px]">
                 <Dropdown
                   id="filter-batch"
                   value={batchFilter}

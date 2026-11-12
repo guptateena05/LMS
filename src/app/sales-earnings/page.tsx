@@ -513,7 +513,7 @@ function SalesEarningsContent() {
 
               {/* Pagination */}
               {filteredSales.length > SALES_PER_PAGE && (
-                <div className="p-4 border-t border-slate-100 flex items-center justify-between">
+                <div className="p-4 border-t border-slate-100">
                   <Pagination
                     currentPage={currentPage}
                     totalPages={totalPages}

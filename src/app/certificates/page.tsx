@@ -570,7 +570,7 @@ export default function CertificatesPage() {
               {/* Type & Template Dropdown Selectors */}
               <div className="flex flex-wrap items-center gap-3">
                 {/* 1. Certification Type Dropdown */}
-                <div className="w-full sm:w-auto min-w-[210px]">
+                <div className="w-full sm:w-auto sm:min-w-[210px]">
                   <Dropdown
                     id="certificate-type-select"
                     value={selectedCertType}
@@ -586,7 +586,7 @@ export default function CertificatesPage() {
                 </div>
 
                 {/* 2. Certificate Template Dropdown */}
-                <div className="w-full sm:w-auto min-w-[260px] md:min-w-[300px]">
+                <div className="w-full sm:w-auto sm:min-w-[260px] md:min-w-[300px]">
                   <Dropdown
                     id="certificate-template-select"
                     value={selectedTemplate}
@@ -787,14 +787,14 @@ export default function CertificatesPage() {
                       ref={iframeRef}
                       title={`Preview: ${selectedTemplate}`}
                       src={previewContent}
-                      className="w-full h-[650px] md:h-[750px] rounded-xl border-0 bg-white shadow-sm"
+                      className="w-full h-[420px] sm:h-[600px] md:h-[750px] rounded-xl border-0 bg-white shadow-sm"
                     />
                   ) : (
                     <iframe
                       ref={iframeRef}
                       title={`Preview: ${selectedTemplate}`}
                       srcDoc={getIframeDoc(previewContent)}
-                      className="w-full h-[650px] md:h-[750px] rounded-xl border-0 bg-white shadow-sm"
+                      className="w-full h-[420px] sm:h-[600px] md:h-[750px] rounded-xl border-0 bg-white shadow-sm"
                     />
                   )}
                 </div>
